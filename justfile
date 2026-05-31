@@ -15,7 +15,6 @@
 #   just              # list recipes
 #   just platform     # show what was detected
 #   just sync         # reconcile everything (apt → link → mise → chsh) — run anytime
-#   just install      # apt packages + mise tools (when already linked)
 #   just link         # stow configs into $HOME
 
 DOTS := justfile_directory()
@@ -33,9 +32,6 @@ sync: _apt link _mise
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
-
-# Install everything: apt packages + mise tools.
-install: _apt _mise
 
 # (internal) Install mise tools from config.toml.
 _mise:
