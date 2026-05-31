@@ -1,0 +1,65 @@
+# silverfox tv channel — sesh session picker.
+# Source-only (no actions). t() in 40-aliases.sh and tmux's
+# prefix+o popup both capture stdout and run `sesh connect`
+# externally to dodge tv 0.15.6's attach_to_tty bug with
+# multiplexer-execute mode.
+#
+# Tmux sessions only — zoxide entries removed so the picker shows
+# what already exists instead of mixing in every visited dir. Icons
+# come from `sesh list -t --icons`; the output template strips the
+# icon + ANSI so sesh connect gets just the session name.
+
+[metadata]
+name = "sesh"
+description = "Tmux sessions (enter=connect, ctrl-n=new, ctrl-d=kill)"
+requirements = ["sesh"]
+
+[source]
+command  = "sesh list -t --icons"
+ansi     = true
+frecency = false
+no_sort  = true
+output   = "{strip_ansi|split: :1..|join: }"
+
+[preview]
+command = "sh ~/.config/television/preview-sesh.sh '{strip_ansi|split: :1..|join: }'"
+
+# ctrl-n / ctrl-d actions. `new` runs sesh-new.sh under mode=execute
+# (needs /dev/tty for `read`); the script creates the session detached
+# and prints its name on stdout so the outer t() wrapper picks it up
+# and runs `sesh connect` in clean context — direct attach from inside
+# tv would hit tv 0.15.6's attach_to_tty bug. `kill` runs in mode=fork
+# (tmux kill-session doesn't open /dev/tty, so fork is safe); the list
+# isn't refreshed automatically — Esc + re-open to see the change.
+[actions.new]
+description = "Create new tmux session"
+command = "sh ~/.config/television/sesh-new.sh"
+mode = "execute"
+
+[actions.kill]
+description = "Kill selected tmux session"
+command = "tmux kill-session -t '{strip_ansi|split: :1..|join: }' 2>/dev/null"
+mode = "fork"
+
+[keybindings]
+ctrl-n = "actions:new"
+ctrl-d = ["actions:kill", "reload_source"]
+# Manual refresh fallback in case tv 0.15.6 doesn't chain the array
+# above into a single ctrl-d press (the array form is documented for
+# multiple keys → one action, not key → multiple actions).
+ctrl-r = "reload_source"
+
+# Channel-level UI overrides — picker feels like a popup, not fullscreen.
+# ui_scale is a percentage of the host terminal/popup; 75 keeps the
+# picker centered with breathing room while still showing 8-12 entries
+# comfortably. tv 0.15.6 has no way to put custom text in the bottom
+# status bar, so the keybind hints live in the preview panel footer
+# (closest visible-bottom anchor). Help panel stays hidden.
+[ui]
+ui_scale = 75
+
+[ui.preview_panel]
+footer = " ↵ connect   ^N new   ^D kill   ^R refresh "
+
+[ui.help_panel]
+hidden = true

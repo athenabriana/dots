@@ -1,0 +1,10 @@
+# wsl/packages.txt — apt packages specific to WSL (headless Ubuntu).
+#
+# Merged on top of common/packages.txt by `just _apt`. The shared shell /
+# CLI tooling lives in common; this file is for WSL-only apt extras.
+#
+# Empty on purpose: host-browser integration used to need `wslu`
+# (wslview), but that's unmaintained — replaced by the in-repo `winopen`
+# opener (wsl/stow/winopen), which needs no apt package. Add WSL-only
+# apt extras here if you ever want them.
+

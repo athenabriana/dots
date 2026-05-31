@@ -1,0 +1,43 @@
+[tools]
+node = "lts"
+bun = "latest"
+pnpm = "latest"
+python = "latest"
+uv = "latest"
+go = "latest"
+rust = "stable"
+java = "21"
+maven = "latest"
+gcloud = "latest"
+
+# CLI tools
+gh = "latest"
+claude = "latest"
+delta = "latest"
+lazygit = "latest"
+terraform = "latest"
+starship = "latest"
+fzf = "latest"
+atuin = "latest"
+carapace = "latest"
+zoxide = "latest"
+bat = "latest"
+eza = "latest"
+ripgrep = "latest"
+
+[settings]
+trusted_config_paths = [ "/" ]
+auto_install = true
+not_found_auto_install = true
+idiomatic_version_file_enable_tools = [
+  "node",
+  "bun",
+  "pnpm",
+  "python",
+  "go",
+  "rust",
+  "terraform",
+]
+
+[settings.status]
+missing_tools = "always"

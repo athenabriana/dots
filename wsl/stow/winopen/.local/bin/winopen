@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+# winopen — open a URL or file on the Windows host from WSL.
+#
+# A tiny, dependency-free replacement for wslu's `wslview` (which is no
+# longer maintained). URLs pass straight through; filesystem paths are
+# translated to Windows paths. The target is handed to PowerShell via an
+# env var (not string interpolation) so URLs with `&`, spaces, etc. are
+# safe from shell/cmd quoting issues. ShellExecute (Start-Process) opens
+# it in whatever Windows app is the default for that scheme/type.
+set -eu
+
+arg="${1:-}"
+[ -n "$arg" ] || { echo "usage: winopen <url|file>" >&2; exit 1; }
+
+case "$arg" in
+    *://*|mailto:*) target="$arg" ;;                                   # URL → as-is
+    *) target="$(wslpath -w "$arg" 2>/dev/null || printf '%s' "$arg")" ;;  # path → Windows path
+esac
+
+# WSLENV is what makes a Linux env var visible to a Windows process;
+# without listing it there, $env:WINOPEN_TARGET arrives empty.
+export WINOPEN_TARGET="$target"
+export WSLENV="${WSLENV:+$WSLENV:}WINOPEN_TARGET"
+exec powershell.exe -NoProfile -Command 'Start-Process -FilePath $env:WINOPEN_TARGET'

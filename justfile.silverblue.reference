@@ -1,0 +1,265 @@
+default:
+    @just -f {{ justfile() }} --list
+
+chsh shell="":
+    #!/usr/bin/bash
+    set -euo pipefail
+    target="{{shell}}"
+    if [[ -z "$target" ]]; then
+        target=$(gum choose bash zsh)
+    fi
+    case "$target" in
+        bash|zsh) ;;
+        *) echo "Unknown shell: $target (try: bash, zsh)" >&2; exit 1 ;;
+    esac
+    current=$(getent passwd "$USER" | cut -d: -f7)
+    if [[ "$current" == "/usr/bin/$target" ]]; then
+        echo "Already on $target."
+        exit 0
+    fi
+    sudo usermod -s "/usr/bin/$target" "$USER"
+    echo "Done. Log out and back in, or 'exec $target -l' to swap now."
+
+clean *args:
+    #!/usr/bin/bash
+    if [ $# -eq 0 ]; then
+      gum confirm "Clean podman images, rpm-ostree cache, and nix store?" || exit 0
+      podman image prune -af
+      rpm-ostree cleanup -prm
+      command -v nh >/dev/null 2>&1 && nh clean || echo "nh not installed, skipping nix cleanup"
+    else
+      rpm-ostree cleanup "$@"
+    fi
+
+dotfiles-sync:
+    #!/usr/bin/bash
+    set -euo pipefail
+    SKEL="/etc/skel/Dotfiles"
+    HOME_DOTFILES="$HOME/Dotfiles"
+    [ -d "$SKEL" ] || { echo "/etc/skel/Dotfiles not found" >&2; exit 1; }
+    if [ ! -d "$HOME_DOTFILES" ]; then
+        echo "~/Dotfiles missing — restoring from $SKEL…"
+        cp -a "$SKEL" "$HOME_DOTFILES"
+    fi
+    STATE_VERSION=$(date +%y.%m)
+    while IFS= read -r -d '' f; do
+        if grep -q '__USER__' "$f" 2>/dev/null; then
+            echo "Replacing __USER__ → $USER in ${f#"$HOME_DOTFILES/home-manager/"}"
+            sed -i "s/__USER__/$USER/g" "$f"
+        fi
+        if grep -q '__STATE_VERSION__' "$f" 2>/dev/null; then
+            echo "Replacing __STATE_VERSION__ → $STATE_VERSION in ${f#"$HOME_DOTFILES/home-manager/"}"
+            sed -i "s/__STATE_VERSION__/$STATE_VERSION/g" "$f"
+        fi
+    done < <(find "$HOME_DOTFILES/home-manager" -type f -print0 2>/dev/null || true)
+    if command -v stow >/dev/null 2>&1 && [ -d "$HOME_DOTFILES/stow" ]; then
+        # Pre-stow cleanup. stow refuses to "own" two kinds of symlinks
+        # that nonetheless came from a previous sync run:
+        #   1. absolute symlinks pointing into our stow tree (older
+        #      versions of this recipe wrote those; stow now wants
+        #      relative ones).
+        #   2. broken symlinks left behind when a stow file/dir was
+        #      renamed or deleted between syncs.
+        # Both are unambiguously ours to clean up — only stow + this
+        # recipe create symlinks under these target roots. Removing
+        # them lets stow recreate the right link on the next pass.
+        STOW_RESOLVED="$(readlink -f "$HOME_DOTFILES/stow")"
+        # Sync is one-way: Dotfiles/stow/ is canonical, the home tree
+        # is its rendered view. Anything at a stow target path that
+        # isn't either the right symlink or a transparent directory is
+        # cleaned out so stow can lay down its link. Edits made through
+        # an existing symlink still persist — those edits go into
+        # Dotfiles/stow/ and stow leaves the symlink alone on rerun.
+        # What gets cleaned, all scoped to under $HOME/<top>/ for each
+        # <top> the stow tree contains:
+        #   - absolute symlinks into the stow tree (stow can't re-own
+        #     those; recreated as relative on the stow pass)
+        #   - broken symlinks that point (or pointed) at the stow tree
+        #   - regular files at any path that the stow tree also covers
+        #     (these are the app-atomic-rename casualties; deleting
+        #     discards the app's last write in favour of the version
+        #     in Dotfiles/stow/, which is the source of truth)
+        STOW_TOPS=$(find "$HOME_DOTFILES/stow" -mindepth 2 -maxdepth 2 -type d -printf '%f\n' 2>/dev/null | sort -u)
+        for top in $STOW_TOPS; do
+            root="$HOME/$top"
+            [ -d "$root" ] || continue
+            while IFS= read -r -d '' link; do
+                target="$(readlink "$link")"
+                if [ -e "$link" ]; then
+                    case "$target" in
+                        /*)
+                            resolved="$(readlink -f "$link" 2>/dev/null || true)"
+                            case "$resolved" in
+                                "$STOW_RESOLVED"/*)
+                                    rm "$link"
+                                    echo "stow: purged absolute symlink ${link#"$HOME/"} (will be recreated)"
+                                    ;;
+                            esac
+                            ;;
+                    esac
+                else
+                    case "$target" in
+                        *Dotfiles/stow/*)
+                            rm "$link"
+                            echo "stow: purged broken symlink ${link#"$HOME/"}"
+                            ;;
+                    esac
+                fi
+            done < <(find "$root" -type l -print0 2>/dev/null)
+        done
+
+        # Delete real files at any path the stow tree also covers.
+        # These are usually the result of an app atomic-renaming over
+        # the stow symlink (Zed, VSCode, GTK apps): the file holds the
+        # app's most recent on-disk write, but the user has opted into
+        # a strictly stow-driven flow, so those drifted writes are
+        # discarded in favour of whatever Dotfiles/stow/ holds.
+        find "$HOME_DOTFILES/stow" -mindepth 1 -maxdepth 1 -type d -print0 \
+          | while IFS= read -r -d '' pkg; do
+              # Drop the leading "<pkg>/" once — every file under $pkg
+              # is rooted at the package dir.
+              pkg_prefix="$pkg/"
+              while IFS= read -r -d '' src; do
+                  rel="${src#"$pkg_prefix"}"
+                  dst="$HOME/$rel"
+                  [ -e "$dst" ] || continue
+                  [ -L "$dst" ] && continue
+                  [ -d "$dst" ] && continue
+                  # CRITICAL: if a parent directory of dst is a folded
+                  # symlink that points back into the stow tree, then
+                  # dst resolves to the source file itself. Deleting
+                  # via that path would wipe the canonical file. Skip
+                  # whenever the resolved dst is the resolved src.
+                  if [ "$(readlink -f "$dst" 2>/dev/null)" = "$(readlink -f "$src" 2>/dev/null)" ]; then
+                      continue
+                  fi
+                  rm -f "$dst"
+                  echo "stow: removed local file ${dst#"$HOME/"} (stow source wins)"
+              done < <(find "$pkg" -type f -print0)
+            done
+
+        # Stow each package. After the cleanup above, only directory
+        # conflicts or other oddities should remain; report and keep
+        # going so one rogue package doesn't block the rest.
+        find "$HOME_DOTFILES/stow" -mindepth 1 -maxdepth 1 -type d -print0 \
+          | while IFS= read -r -d '' pkg; do
+              pkg_name="${pkg##*/}"
+              if ! stow_output="$(stow -R -d "$HOME_DOTFILES/stow" -t "$HOME" "$pkg_name" 2>&1)"; then
+                  echo "stow: $pkg_name skipped — unresolved conflict:" >&2
+                  printf '%s\n' "$stow_output" | sed 's/^/  /' >&2
+              fi
+            done
+    fi
+    echo "dotfiles: synced."
+
+edit:
+    #!/usr/bin/bash
+    [ -d "$HOME/Dotfiles" ] || { echo "~/Dotfiles does not exist — run 'dots dotfiles-sync'" >&2; exit 1; }
+    if command -v zed >/dev/null 2>&1; then
+        exec zed "$HOME/Dotfiles"
+    elif command -v xdg-open >/dev/null 2>&1; then
+        exec xdg-open "$HOME/Dotfiles"
+    else
+        echo "Neither zed nor xdg-open found" >&2
+        exit 1
+    fi
+
+firmware-upgrade:
+    fwupdmgr refresh --force
+    fwupdmgr get-updates
+    fwupdmgr update
+
+diff:
+    #!/usr/bin/bash
+    nh home switch --impure --dry 2>/dev/null \
+      || echo "Dry-run not available. Run 'dots sync' to apply."
+
+doctor:
+    #!/usr/bin/bash
+    echo "=== nix version ==="
+    nix --version 2>&1 || echo "NOT FOUND"
+    echo "=== nix-daemon ==="
+    if systemctl is-active nix-daemon >/dev/null 2>&1; then
+      echo "active"
+    else
+      echo "NOT ACTIVE (try: sudo systemctl start nix-daemon)"
+    fi
+    echo "=== /nix mount ==="
+    if findmnt /nix >/dev/null 2>&1; then
+      echo "$(findmnt -n -o SOURCE /nix) → /nix"
+    else
+      echo "NOT MOUNTED (nix bootstrap may not have run yet)"
+    fi
+    echo "=== SELinux /nix/store ==="
+    if [ -d /nix/store ]; then
+      ls -Z /nix/store 2>&1 | head -1
+    else
+      echo "NOT ACCESSIBLE — /nix/store does not exist"
+    fi
+    echo "=== nh version ==="
+    nh --version 2>&1 || echo "NOT INSTALLED (run 'dots sync')"
+    echo "=== NH_HOME_FLAKE ==="
+    echo "${NH_HOME_FLAKE:-<unset>}"
+    echo "=== flake ==="
+    _flake_dir="${NH_HOME_FLAKE:-$HOME/Dotfiles/home-manager}"
+    if [ -e "$_flake_dir/flake.nix" ]; then
+      echo "found: $_flake_dir/flake.nix"
+      [ -f "$_flake_dir/flake.lock" ] && echo "lock: ok" || echo "lock: ausente (run 'nix flake update' para gerar)"
+    else
+      echo "flake not found at $_flake_dir"
+      echo "Run 'dots sync' to bootstrap from skel."
+    fi
+
+sync *args:
+    #!/usr/bin/bash
+    set -euo pipefail
+    offline=0
+    if [[ " {{args}} " == *" --offline "* ]]; then
+        offline=1
+    fi
+    just -f {{ justfile() }} dotfiles-sync
+    if ! command -v nh >/dev/null 2>&1; then
+        echo "nh not found — skipping nix sync."
+        exit 0
+    fi
+    _flake="${NH_HOME_FLAKE:-$HOME/Dotfiles/home-manager}"
+    if [ ! -f "$_flake/flake.nix" ]; then
+        echo "flake.nix not found at $_flake" >&2
+        exit 1
+    fi
+    if [ "$offline" -eq 0 ]; then
+        echo "nix: updating flake inputs…"
+        (cd "$_flake" && nix flake update)
+    else
+        echo "nix: skipping flake update (--offline)."
+    fi
+    echo "nix/home-manager: applying configuration…"
+    nh home switch --impure "$_flake"
+
+motd-toggle:
+    #!/usr/bin/bash
+    if test -e "${HOME}/.config/no-show-user-motd"; then
+      rm -f "${HOME}/.config/no-show-user-motd"
+      echo "Banner enabled on next login."
+    else
+      mkdir -p "${HOME}/.config"
+      touch "${HOME}/.config/no-show-user-motd"
+      echo "Banner disabled."
+    fi
+
+os-changelog *args:
+    rpm-ostree db diff {{args}}
+
+os-rollback *args:
+    #!/usr/bin/bash
+    gum confirm "Rollback to the previous deployment?" || exit 0
+    rpm-ostree rollback {{args}}
+    echo "Reboot to apply."
+
+os-status *args:
+    rpm-ostree status {{args}}
+
+os-upgrade *args:
+    rpm-ostree upgrade
+    @echo "Reboot to apply the staged deployment."
+

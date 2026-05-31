@@ -1,0 +1,45 @@
+[user]
+	name = Athena Briana
+	email = me@athenabriana.com
+
+[init]
+	defaultBranch = main
+
+[pull]
+	rebase = true
+
+[push]
+	autoSetupRemote = true
+	default = simple
+
+[fetch]
+	prune = true
+
+[rebase]
+	autostash = true
+
+[rerere]
+	enabled = true
+
+[merge]
+	conflictstyle = zdiff3
+
+[diff]
+	algorithm = histogram
+	colorMoved = default
+
+# delta — better diffs/pager (installed via mise). Falls back to the
+# default pager if `delta` isn't on PATH.
+[core]
+	pager = delta
+
+[interactive]
+	diffFilter = delta --color-only
+
+[delta]
+	navigate = true
+	line-numbers = true
+	side-by-side = false
+
+[color]
+	ui = auto

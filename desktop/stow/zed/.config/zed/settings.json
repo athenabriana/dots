@@ -1,0 +1,41 @@
+{
+  "outline_panel": {
+    "dock": "right"
+  },
+  "collaboration_panel": {
+    "dock": "right"
+  },
+  "project_panel": {
+    "dock": "right"
+  },
+  "helix_mode": false,
+  "git_panel": {
+    "dock": "right",
+    "tree_view": true
+  },
+  "agent_servers": {
+    "claude-acp": {
+      "type": "registry"
+    },
+    "opencode": {
+      "type": "registry"
+    }
+  },
+  "language_models": {
+    "opencode": {
+      "show_zen_models": false,
+      "show_go_models": false
+    }
+  },
+  "agent": {
+    "dock": "left",
+    "default_model": {
+      "provider": "opencode",
+      "model": "go/kimi-k2.5",
+      "enable_thinking": false
+    },
+    "favorite_models": [],
+    "model_parameters": []
+  },
+  "theme": "Silverfox Cosmic"
+}

@@ -1,0 +1,39 @@
+# packages.txt — apt packages for the WSL (Ubuntu) dotfiles setup.
+#
+# One package per line; blank lines and lines starting with `#` are
+# ignored. Installed by `just apt`, which skips anything dpkg-query
+# already reports as installed.
+#
+# This holds ONLY what must come from the system: the login shell + its
+# plugins, the dotfile bootstrap (stow/just), a few bootstrap utils, and
+# the C build toolchain mise needs to compile languages from source.
+#
+# All CLI tools (starship, fzf, atuin, carapace, zoxide, bat, eza,
+# ripgrep, delta, lazygit, gh, claude, terraform, …) are managed by mise
+# instead — see mise/.config/mise/config.toml. mise pins latest, verifies
+# checksums/attestations, and works the same on every platform.
+
+# ── shell + dotfile tooling ─────────────────────────────────────────
+zsh
+zsh-autosuggestions
+zsh-syntax-highlighting
+stow
+just
+
+# ── bootstrap utilities ─────────────────────────────────────────────
+git
+curl
+unzip
+ca-certificates
+
+# ── build toolchain (mise compiles python/etc. from source) ─────────
+build-essential
+pkg-config
+libssl-dev
+zlib1g-dev
+libbz2-dev
+libreadline-dev
+libsqlite3-dev
+libffi-dev
+liblzma-dev
+tk-dev

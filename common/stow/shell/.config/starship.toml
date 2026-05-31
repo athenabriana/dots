@@ -1,0 +1,81 @@
+[character]
+success_symbol = "[❯](bold green)"
+error_symbol = "[❯](bold red)"
+vimcmd_symbol = "[❮](bold blue)"
+
+[directory]
+style = "bold blue"
+truncation_length = 3
+truncate_to_repo = true
+
+[git_branch]
+style = "bold purple"
+symbol = " "
+
+[git_status]
+style = "red"
+
+[cmd_duration]
+style = "dimmed yellow"
+min_time = 2000
+
+[username]
+style_user = "bold yellow"
+style_root = "bold red"
+show_always = false
+
+[hostname]
+style = "bold cyan"
+ssh_only = true
+
+[nodejs]
+style = "bold green"
+
+[python]
+style = "bold yellow"
+
+[rust]
+style = "bold red"
+
+[golang]
+style = "bold cyan"
+
+[bun]
+style = "bold purple"
+
+[deno]
+style = "bold purple"
+
+[lua]
+style = "bold blue"
+
+[ruby]
+style = "bold red"
+
+[java]
+style = "bold yellow"
+
+[zig]
+style = "bold yellow"
+
+[gcloud]
+style = "bold blue"
+
+[aws]
+style = "bold yellow"
+
+[azure]
+style = "bold blue"
+
+[kubernetes]
+style = "bold purple"
+disabled = false
+
+[docker_context]
+style = "bold cyan"
+
+[package]
+style = "bold red"
+
+[nix_shell]
+style = "bold blue"
