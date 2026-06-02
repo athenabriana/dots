@@ -6,15 +6,16 @@
 # television) and are linked by `just link` only on the desktop platform.
 #
 # NOTE: not everything desktop has an apt package:
-#   - tmux        → apt (listed below)
 #   - ghostty     → not in apt; PPA or build. See its install docs.
 #   - zed         → not in apt; official installer (zed.dev) or flatpak.
-#   - television  → not in apt; install the `tv` binary (cargo / release
-#                   tarball), same idea as the bins recipe.
-# Handle those in a dedicated recipe when you flesh out desktop support;
+#   - television  → not in apt; install the `tv` binary (cargo / release).
+#   - sesh        → not in apt; go install / release binary.
+# Handle those in a dedicated recipe when fleshing out desktop support;
 # for now apt covers what it can and the rest is documented here.
 
 tmux
+# wl-copy — tmux copy-mode pipes selections to the Wayland clipboard
+wl-clipboard
 
 # ── native build toolchain ──────────────────────────────────────────
 # NOT needed to bootstrap: mise downloads precompiled python/node/etc.

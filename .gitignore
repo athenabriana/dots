@@ -1,15 +1,10 @@
-# Never commit private keys — even to a private repo (git history is
-# forever). Public keys (*.pub) are re-included below.
+# Guardrail: never commit private keys (git history is forever).
 id_ed25519*
 id_rsa*
 id_ecdsa*
 *.pem
 *.key
 !*.pub
-
-# Machine-specific SSH state (regenerated per host).
-known_hosts
-known_hosts.old
 
 # Editor / OS cruft
 *.swp

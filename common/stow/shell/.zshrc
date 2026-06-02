@@ -1,32 +1,23 @@
-# ~/.zshrc — silverfox zsh interactive-shell wiring.
-#
-# Stow package from Dotfiles/shell/.zshrc — to customize, replace the
-# symlink with a real file and edit. The skel merge (profile.d) copies
-# new defaults from /etc/skel on every login.
+# ~/.zshrc — zsh interactive-shell wiring (stowed from Dots/common/stow/shell).
 #
 # POSIX-shared config lives in ~/.config/shell/*.sh and is sourced
 # below; only zsh-specific code (compinit, tool inits, ZLE keybinds,
 # zsh plugins) lives in this file.
 
-# ── Shared POSIX modules (PATH, EDITOR, NH_HOME_FLAKE, aliases, mise shims) ─
-_silverfox_modules="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
-if [ -d "$_silverfox_modules" ]; then
-    for _f in "$_silverfox_modules"/*.sh; do
+# ── Shared POSIX modules (PATH, EDITOR, aliases, mise shims) ──────────
+_dots_modules="${XDG_CONFIG_HOME:-$HOME/.config}/shell"
+if [ -d "$_dots_modules" ]; then
+    for _f in "$_dots_modules"/*.sh; do
         [ -r "$_f" ] && . "$_f"
     done
     unset _f
 fi
-unset _silverfox_modules
+unset _dots_modules
 
-# ── compinit — load completion system before tool inits ────────────────
-# atuin, zoxide, mise, fzf, and carapace each emit `compdef …` lines
-# from their `init zsh` output. Those run at source-time and need
-# `compdef` already defined, which only happens after `compinit` runs.
-#
-# `-u` skips the security check on group-writable completion dirs
-# (rpm-ostree's /usr is read-only and group-owned, which compinit
-# otherwise flags interactively). `-d` pins the dump file under
-# $XDG_CACHE_HOME so we don't litter $HOME with .zcompdump.
+# ── compinit — must run before the tool inits below: their `init zsh`
+# output emits `compdef …` lines that need compinit loaded. `-u` skips
+# the group-writable-dir security prompt; `-d` keeps .zcompdump out of
+# $HOME.
 autoload -Uz compinit
 compinit -u -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
 
@@ -44,11 +35,9 @@ fi
 # Must load before zsh-syntax-highlighting (last rule).
 (( ${+commands[carapace]} )) && source <(carapace _carapace zsh)
 
-# ── Ctrl-P — VS-Code-style fzf quick-open ──────────────────────────────
-# zsh's ZLE (line editor) is the equivalent of bash's readline.
-# `zle -N` registers a widget; `bindkey '^P'` binds Ctrl-P.
+# ── Ctrl-P — fzf quick-open: pick a file, open in $VISUAL/$EDITOR ─────
 if (( ${+commands[fzf]} )); then
-    _silverfox_fzf_quick_open() {
+    _dots_fzf_quick_open() {
         local file editor
         if (( ${+commands[rg]} )); then
             file=$(rg --files --hidden --follow --glob '!.git' 2>/dev/null \
@@ -62,14 +51,12 @@ if (( ${+commands[fzf]} )); then
         eval "$editor \"\$file\""
         zle reset-prompt 2>/dev/null
     }
-    zle -N _silverfox_fzf_quick_open
-    bindkey '^P' _silverfox_fzf_quick_open
+    zle -N _dots_fzf_quick_open
+    bindkey '^P' _dots_fzf_quick_open
 fi
 
 # ── Alt-S — toggle `sudo ` prefix on current line ─────────────────────
-# BUFFER / CURSOR are zsh's editable-line variables (equivalent of
-# bash's READLINE_LINE / READLINE_POINT).
-_silverfox_toggle_sudo() {
+_dots_toggle_sudo() {
     if [[ "$BUFFER" == sudo\ * ]]; then
         BUFFER="${BUFFER#sudo }"
         (( CURSOR -= 5 ))
@@ -79,12 +66,12 @@ _silverfox_toggle_sudo() {
         (( CURSOR += 5 ))
     fi
 }
-zle -N _silverfox_toggle_sudo
-bindkey '^[s' _silverfox_toggle_sudo  # ^[ = ESC = Alt prefix; s = lowercase
+zle -N _dots_toggle_sudo
+bindkey '^[s' _dots_toggle_sudo
 
 # ── Ctrl-G — fzf git branch picker → checkout ─────────────────────────
 if (( ${+commands[fzf]} )); then
-    _silverfox_fzf_git_checkout() {
+    _dots_fzf_git_checkout() {
         git rev-parse --is-inside-work-tree >/dev/null 2>&1 || return
         local branch
         branch=$(git for-each-ref --format='%(refname:short)' refs/heads/ refs/remotes/ 2>/dev/null \
@@ -94,31 +81,28 @@ if (( ${+commands[fzf]} )); then
         git checkout "$branch"
         zle reset-prompt 2>/dev/null
     }
-    zle -N _silverfox_fzf_git_checkout
-    bindkey '^G' _silverfox_fzf_git_checkout
+    zle -N _dots_fzf_git_checkout
+    bindkey '^G' _dots_fzf_git_checkout
 fi
 
 # ── Alt-T — attach/create tmux session (like `t`, but only outside tmux) ─
 # Inside tmux, Alt+t is consumed by tmux (new-window). Outside tmux, this
 # creates/attaches to a session named after the parent-child dir pair.
 if (( ${+commands[tmux]} )); then
-    _silverfox_tmux_attach_or_create() {
+    _dots_tmux_attach_or_create() {
         [[ -z "${TMUX:-}" ]] || return
         t
         zle reset-prompt 2>/dev/null
     }
-    zle -N _silverfox_tmux_attach_or_create
-    bindkey '^[t' _silverfox_tmux_attach_or_create
+    zle -N _dots_tmux_attach_or_create
+    bindkey '^[t' _dots_tmux_attach_or_create
 fi
 
 # ── Plugins via sheldon (MUST load last) ────────────────────────────────
-# fzf-tab (Tab → fzf picker over compsys candidates), then
-# zsh-autosuggestions (greyed-out history completion; → / End to accept),
-# then zsh-syntax-highlighting (invalid commands red, paths blue, …), in
-# that order — see ~/.config/sheldon/plugins.toml. syntax-highlighting
-# wraps every existing ZLE widget at source time, so sourcing here at the
-# end means the Ctrl-P / Alt-S / Ctrl-G widgets above also get colored.
-# sheldon comes from mise; plugins are cloned by `dots sync`.
+# Order lives in ~/.config/sheldon/plugins.toml: fzf-tab, then
+# zsh-autosuggestions, then zsh-syntax-highlighting — the latter wraps
+# every ZLE widget that exists at source time, so loading at the end
+# also covers the widgets defined above. Plugins are cloned by `dots sync`.
 
 # fzf-tab tuning (zstyles read when the plugin loads below):
 zstyle ':completion:*' menu no                     # hand the menu to fzf-tab

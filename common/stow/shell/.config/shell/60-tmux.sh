@@ -13,8 +13,8 @@
 #   $TMUX                  already inside tmux (recursion would loop)
 #   $ZELLIJ                legacy zellij child
 #   $SSH_TTY               SSH session — let remote own multiplexing
-#   $SILVERFOX_AGENT_SHELL claude / cursor / etc. (see 30-agent-detect.sh)
-#   $SILVERFOX_NO_TMUX     manual one-off opt-out for this shell
+#   $DOTS_AGENT_SHELL claude / cursor / etc. (see 30-agent-detect.sh)
+#   $DOTS_NO_TMUX     manual one-off opt-out for this shell
 #   $TERM = "dumb"         non-interactive context (eshell, etc.)
 #   stdin or stdout not a TTY (script / pipe context)
 #
@@ -24,8 +24,8 @@
 if [ -z "${TMUX:-}" ] \
     && [ -z "${ZELLIJ:-}" ] \
     && [ -z "${SSH_TTY:-}" ] \
-    && [ -z "${SILVERFOX_AGENT_SHELL:-}" ] \
-    && [ -z "${SILVERFOX_NO_TMUX:-}" ] \
+    && [ -z "${DOTS_AGENT_SHELL:-}" ] \
+    && [ -z "${DOTS_NO_TMUX:-}" ] \
     && [ "${TERM:-}" != "dumb" ] \
     && [ -t 0 ] && [ -t 1 ] \
     && command -v t >/dev/null 2>&1; then

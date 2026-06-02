@@ -28,8 +28,7 @@
 	algorithm = histogram
 	colorMoved = default
 
-# delta — better diffs/pager (installed via mise). Falls back to the
-# default pager if `delta` isn't on PATH.
+# delta — diff pager (installed via mise).
 [core]
 	pager = delta
 

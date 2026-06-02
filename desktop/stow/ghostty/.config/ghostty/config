@@ -1,14 +1,13 @@
-# silverfox ghostty config — ghostty owns tabs/splits; tmux runs as a
-# pure session-keeper (resurrect+continuum) behind it. Keep window
-# chrome minimal; the tmux status bar carries session context when a
-# pane is attached.
+# ghostty config — ghostty owns tabs/splits; tmux runs as a pure
+# session-keeper (resurrect+continuum) behind it. Window chrome kept
+# minimal; ghostty's tab title carries session context (tmux status
+# bar is off).
 
 window-decoration = false
 window-show-tab-bar = auto
 window-padding-x = 8
 window-padding-y = 8
 window-padding-balance = true
-config-file = ./config-silverfox
 gtk-custom-css = ./custom.css
 
 # --- Alt-prefixed tabs / splits (parity with the old tmux Alt-binds) ---

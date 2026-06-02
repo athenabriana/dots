@@ -1,6 +1,6 @@
 # 30-agent-detect.sh — detect AI agent shells (POSIX).
 #
-# Sets SILVERFOX_AGENT_SHELL=1 if any known agent marker env var is set.
+# Sets DOTS_AGENT_SHELL=1 if any known agent marker env var is set.
 # Used by later modules (aliases) to skip injection of ANSI/icons that
 # break agents parsing command output.
 #
@@ -18,9 +18,9 @@
 #   ANTIGRAVITY_AGENT    Antigravity
 #   REPL_ID              Replit
 #   COPILOT_MODEL        GitHub Copilot CLI
-#   SILVERFOX_NO_ALIASES   manual opt-out
+#   DOTS_NO_ALIASES   manual opt-out
 
-SILVERFOX_AGENT_SHELL=
+DOTS_AGENT_SHELL=
 for _v in AGENT AI_AGENT \
           CLAUDECODE \
           CURSOR_AGENT CURSOR_TRACE_ID \
@@ -33,12 +33,12 @@ for _v in AGENT AI_AGENT \
           ANTIGRAVITY_AGENT \
           REPL_ID \
           COPILOT_MODEL \
-          SILVERFOX_NO_ALIASES; do
+          DOTS_NO_ALIASES; do
     eval "_val=\${$_v:-}"
     if [ -n "$_val" ]; then
-        SILVERFOX_AGENT_SHELL=1
+        DOTS_AGENT_SHELL=1
         break
     fi
 done
 unset _v _val
-export SILVERFOX_AGENT_SHELL
+export DOTS_AGENT_SHELL

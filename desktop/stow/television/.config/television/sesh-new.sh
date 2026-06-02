@@ -1,5 +1,5 @@
 #!/bin/sh
-# silverfox tv action — prompt for a new tmux session name.
+# tv action — prompt for a new tmux session name.
 #
 # Invoked by the `sesh` channel under `mode = "execute"`, which exec()s
 # this script in tv's place; that gives us /dev/tty cleanly for the

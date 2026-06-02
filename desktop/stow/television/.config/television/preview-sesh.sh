@@ -1,13 +1,8 @@
 #!/usr/bin/env sh
-# tv preview for the silverfox `sesh` cable channel.
-#
-# sesh sources mix two entry kinds:
-#   - tmux session names      (e.g. "silverfox")
-#   - zoxide directories      (e.g. "~/Dotfiles", "/var/...")
-#
-# Branch on what the entry resolves to: existing directory → eza
-# tree; otherwise treat as a tmux session and dump its visible
-# pane via capture-pane. Anything else just prints "no preview".
+# tv preview for the `sesh` cable channel. The channel lists tmux
+# sessions only, but `sesh connect` also accepts directories, so:
+# existing directory → eza tree; otherwise tmux session → visible
+# pane via capture-pane; anything else prints "no preview".
 
 target=$1
 [ -z "$target" ] && exit 0

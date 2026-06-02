@@ -1,4 +1,4 @@
-# silverfox tv channel — sesh session picker.
+# tv channel — sesh session picker.
 # Source-only (no actions). t() in 40-aliases.sh and tmux's
 # prefix+o popup both capture stdout and run `sesh connect`
 # externally to dodge tv 0.15.6's attach_to_tty bug with

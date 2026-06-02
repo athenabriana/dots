@@ -4,17 +4,15 @@
 #   common/   stow packages + packages.txt applied everywhere
 #   wsl/      headless WSL extras (apt)
 #   desktop/  Ubuntu-family desktop extras + GUI stow packages (apt)
-#   fedora/   stub — not wired up yet
-#   macos/    stub — not wired up yet
+# fedora/macos detection exists (lib/detect.sh) but isn't wired up yet.
 #
 # The platform is auto-detected (lib/detect.sh); override with PLAT=…,
-# e.g. `just PLAT=desktop link`. Original Fedora+nix recipes are kept in
-# justfile.silverblue.reference.
+# e.g. `just PLAT=desktop link`.
 #
 # Usage (or via the `dots` shell command from anywhere):
 #   just              # list recipes
 #   just platform     # show what was detected
-#   just sync         # reconcile everything (pull → apt → link → mise → sheldon → skills → chsh) — run anytime
+#   just sync         # reconcile everything — run anytime
 #   just upgrade      # upgrade everything (apt upgrade + mise + zsh plugins), then sync
 #   just link         # stow configs into $HOME
 
@@ -28,8 +26,8 @@ default:
 platform:
     @echo "{{PLAT}}"
 
-# Reconcile the whole machine to the dotfiles (pull → apt → link → mise → sheldon → skills → chsh). Idempotent — run anytime.
-sync: _pull _apt link _mise _sheldon _skills
+# Reconcile the whole machine to the dotfiles (pull → apt → link → mise → sheldon → skills → tmux plugins → chsh). Idempotent — run anytime.
+sync: _pull _apt link _mise _sheldon _skills _tmux-plugins
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
@@ -137,13 +135,27 @@ _skills:
         exit 1
     fi
 
+# (internal) Clone tmux session-persistence plugins (desktop only; see tmux.conf).
+_tmux-plugins:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    [ "{{PLAT}}" = "desktop" ] || exit 0
+    dir="$HOME/.tmux/plugins"
+    for repo in tmux-resurrect tmux-continuum; do
+        name="${repo#tmux-}"
+        if [ ! -d "$dir/$name/.git" ]; then
+            echo "tmux: cloning $repo…"
+            git clone --quiet --depth 1 "https://github.com/tmux-plugins/$repo" "$dir/$name"
+        fi
+    done
+
 # (internal) Install apt packages: common/packages.txt + <platform>/packages.txt.
 _apt:
     #!/usr/bin/env bash
     set -euo pipefail
     case "{{PLAT}}" in
         wsl|desktop) ;;
-        fedora) echo "fedora install not wired up yet — see justfile.silverblue.reference" >&2; exit 1 ;;
+        fedora) echo "fedora (dnf) install not wired up yet" >&2; exit 1 ;;
         macos)  echo "macos (brew) install not wired up yet" >&2; exit 1 ;;
         *)      echo "unknown platform — set PLAT=wsl|desktop" >&2; exit 1 ;;
     esac
@@ -191,14 +203,6 @@ link:
         stow -R --no-folding -d "$root" -t "$HOME" "${packages[@]}"
         echo "stowed from ${root#"{{DOTS}}/"}: ${packages[*]}"
     done
-    # SSH wants tight permissions on the key and dir (key lives in common).
-    sshd="{{DOTS}}/common/stow/ssh/.ssh"
-    if [ -d "$sshd" ]; then
-        chmod 700 "$HOME/.ssh" "$sshd" 2>/dev/null || true
-        chmod 600 "$sshd/id_ed25519_github" "$sshd/config" 2>/dev/null || true
-        chmod 644 "$sshd/id_ed25519_github.pub" "$sshd"/known_hosts* 2>/dev/null || true
-        echo "ssh: permissions set."
-    fi
 
 # Configure the Windows host: Nerd Font + Windows Terminal (WSL only, via winget).
 windows:

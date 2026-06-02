@@ -6,7 +6,7 @@
 # pollute the parse path. Plain `\ls` / `\cat` (backslash-escaped)
 # still hit the GNU coreutils binary regardless.
 
-if [ -z "${SILVERFOX_AGENT_SHELL:-}" ]; then
+if [ -z "${DOTS_AGENT_SHELL:-}" ]; then
     if command -v eza >/dev/null 2>&1; then
         alias ls='eza --icons --group-directories-first'
         alias ll='eza --icons --group-directories-first --long --git --header'
