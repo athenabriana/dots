@@ -1,0 +1,19 @@
+# sheldon — zsh plugin manager (binary via mise, config via stow).
+#
+# `dots sync` runs `sheldon lock` (clone what's missing); `dots upgrade`
+# runs `sheldon lock --update` (bump to latest upstream). The .zshrc
+# sources everything with one `eval "$(sheldon source)"`.
+#
+# Plugins load in definition order. zsh-syntax-highlighting must stay
+# LAST (it wraps every ZLE widget that exists at source time — see the
+# .zshrc widget definitions, which load before sheldon).
+#
+# To pin a plugin, add `rev = "<tag-or-sha>"` to its block.
+
+shell = "zsh"
+
+[plugins.zsh-autosuggestions]
+github = "zsh-users/zsh-autosuggestions"
+
+[plugins.zsh-syntax-highlighting]
+github = "zsh-users/zsh-syntax-highlighting"

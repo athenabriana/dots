@@ -1,39 +1,30 @@
-# packages.txt — apt packages for the WSL (Ubuntu) dotfiles setup.
+# packages.txt — system packages shared by every platform.
 #
 # One package per line; blank lines and lines starting with `#` are
-# ignored. Installed by `just apt`, which skips anything dpkg-query
-# already reports as installed.
+# ignored. Installed by `just sync` (_apt) via the platform's package
+# manager, skipping anything already installed.
 #
-# This holds ONLY what must come from the system: the login shell + its
-# plugins, the dotfile bootstrap (stow/just), a few bootstrap utils, and
-# the C build toolchain mise needs to compile languages from source.
+# This holds ONLY the irreducible system layer — what must exist before
+# mise can run, or what mise can't manage:
+#   - zsh: the login shell (needs a stable path for /etc/shells)
+#   - git/curl/ca-certificates: bootstrap — clone this repo, install mise
+#   - stow: the config linker (perl script, no binary release)
+#   - just: runs this justfile
+#   - unzip: some tool installers still expect it
 #
-# All CLI tools (starship, fzf, atuin, carapace, zoxide, bat, eza,
-# ripgrep, delta, lazygit, gh, claude, terraform, …) are managed by mise
-# instead — see mise/.config/mise/config.toml. mise pins latest, verifies
-# checksums/attestations, and works the same on every platform.
+# Everything else is managed by mise — see mise/.config/mise/config.toml.
+# mise pins latest, verifies checksums/attestations, and works the same
+# on every platform. The zsh plugins (autosuggestions, syntax-highlighting)
+# are managed by sheldon (binary via mise, config via stow) — not packages.
+#
+# These names are identical in apt, dnf, and brew — keep it that way;
+# anything platform-specific or differently-named goes in
+# <platform>/packages.txt (e.g. build-essential lives in wsl/ + desktop/).
 
-# ── shell + dotfile tooling ─────────────────────────────────────────
 zsh
-zsh-autosuggestions
-zsh-syntax-highlighting
-stow
-just
-
-# ── bootstrap utilities ─────────────────────────────────────────────
 git
 curl
-unzip
 ca-certificates
-
-# ── build toolchain (mise compiles python/etc. from source) ─────────
-build-essential
-pkg-config
-libssl-dev
-zlib1g-dev
-libbz2-dev
-libreadline-dev
-libsqlite3-dev
-libffi-dev
-liblzma-dev
-tk-dev
+stow
+just
+unzip

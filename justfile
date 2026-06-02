@@ -14,8 +14,8 @@
 # Usage (or via the `dots` shell command from anywhere):
 #   just              # list recipes
 #   just platform     # show what was detected
-#   just sync         # reconcile everything (apt → link → mise → skills → chsh) — run anytime
-#   just upgrade      # upgrade everything (apt upgrade + mise tools), then sync
+#   just sync         # reconcile everything (pull → apt → link → mise → sheldon → skills → chsh) — run anytime
+#   just upgrade      # upgrade everything (apt upgrade + mise + zsh plugins), then sync
 #   just link         # stow configs into $HOME
 
 DOTS := justfile_directory()
@@ -28,14 +28,59 @@ default:
 platform:
     @echo "{{PLAT}}"
 
-# Reconcile the whole machine to the dotfiles (apt → link → mise → skills → chsh). Idempotent — run anytime.
-sync: _apt link _mise _skills
+# Reconcile the whole machine to the dotfiles (pull → apt → link → mise → sheldon → skills → chsh). Idempotent — run anytime.
+sync: _pull _apt link _mise _sheldon _skills
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
 
-# Upgrade everything to latest (full apt upgrade + mise self-update + tools), then sync.
-upgrade: _apt-upgrade _mise-upgrade sync
+# Upgrade everything to latest (apt upgrade + mise self-update/tools + zsh plugins), then sync.
+upgrade: _pull _apt-upgrade _mise-upgrade _sheldon-upgrade sync
+
+# (internal) Fast-forward the dotfiles repo. Skips the pull if the tree
+# is dirty or the branch diverged — never stashes/merges.
+_pull:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    cd "{{DOTS}}"
+    if [ -n "$(git status --porcelain)" ]; then
+        echo "pull: working tree dirty — skipping git pull." >&2
+        exit 0
+    fi
+    before=$(git rev-parse HEAD)
+    git pull --ff-only --quiet || echo "pull: cannot fast-forward (branch diverged?) — skipping." >&2
+    after=$(git rev-parse HEAD)
+    if [ "$before" != "$after" ]; then
+        echo "pull: updated $(git rev-parse --short "$before") → $(git rev-parse --short "$after")"
+        # just already parsed the old justfile for this run; if the pull
+        # changed it, the rest of this run would use stale recipes.
+        if ! git diff --quiet "$before" "$after" -- justfile; then
+            echo "pull: the justfile itself changed — re-run the command to use the new recipes." >&2
+            exit 1
+        fi
+    fi
+
+# (internal) Install zsh plugins per sheldon's plugins.toml (no-op if current).
+_sheldon:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v sheldon >/dev/null 2>&1; then
+        echo "sheldon not found on PATH — skipping zsh plugins." >&2
+        exit 0
+    fi
+    echo "sheldon: locking zsh plugins…"
+    sheldon lock
+
+# (internal) Bump zsh plugins to latest upstream.
+_sheldon-upgrade:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v sheldon >/dev/null 2>&1; then
+        echo "sheldon not found on PATH — skipping zsh plugin upgrade." >&2
+        exit 0
+    fi
+    echo "sheldon: updating zsh plugins…"
+    sheldon lock --update
 
 # (internal) Full apt upgrade.
 _apt-upgrade:
@@ -179,7 +224,7 @@ chsh shell="zsh":
         *) echo "Unknown shell: $target (try: bash, zsh)" >&2; exit 1 ;;
     esac
     bin="$(command -v "$target" || true)"
-    [ -n "$bin" ] || { echo "$target is not installed (run 'just apt')." >&2; exit 1; }
+    [ -n "$bin" ] || { echo "$target is not installed (run 'just sync')." >&2; exit 1; }
     current=$(getent passwd "$USER" | cut -d: -f7)
     if [ "$current" = "$bin" ]; then
         echo "Already on $target ($bin)."

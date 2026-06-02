@@ -15,3 +15,18 @@
 # for now apt covers what it can and the rest is documented here.
 
 tmux
+
+# ── native build toolchain ──────────────────────────────────────────
+# NOT needed to bootstrap: mise downloads precompiled python/node/etc.
+# This is here because native npm/pip modules (node-gyp, sdist wheels)
+# still need a C toolchain on a dev machine. Same list as wsl/.
+build-essential
+pkg-config
+libssl-dev
+zlib1g-dev
+libbz2-dev
+libreadline-dev
+libsqlite3-dev
+libffi-dev
+liblzma-dev
+tk-dev

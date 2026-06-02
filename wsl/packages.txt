@@ -1,10 +1,25 @@
 # wsl/packages.txt — apt packages specific to WSL (headless Ubuntu).
 #
-# Merged on top of common/packages.txt by `just _apt`. The shared shell /
-# CLI tooling lives in common; this file is for WSL-only apt extras.
+# Merged on top of common/packages.txt by `just _apt`. The shared
+# system layer lives in common (universal names only); this file is for
+# apt-specific names and WSL-only extras.
 #
-# Empty on purpose: host-browser integration used to need `wslu`
-# (wslview), but that's unmaintained — replaced by the in-repo `winopen`
-# opener (wsl/stow/winopen), which needs no apt package. Add WSL-only
-# apt extras here if you ever want them.
+# Host-browser integration used to need `wslu` (wslview), but that's
+# unmaintained — replaced by the in-repo `winopen` opener
+# (wsl/stow/winopen), which needs no apt package.
 
+# ── native build toolchain ──────────────────────────────────────────
+# NOT needed to bootstrap: mise downloads precompiled python/node/etc.
+# (python-build-standalone). This is here because native npm/pip modules
+# (node-gyp, sdist wheels) still need a C toolchain on a dev machine.
+# Fedora equivalent: @development-tools; macOS: Xcode CLT.
+build-essential
+pkg-config
+libssl-dev
+zlib1g-dev
+libbz2-dev
+libreadline-dev
+libsqlite3-dev
+libffi-dev
+liblzma-dev
+tk-dev

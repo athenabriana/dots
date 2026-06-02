@@ -42,17 +42,6 @@ fi
 # Must load before zsh-syntax-highlighting (last rule).
 (( ${+commands[carapace]} )) && source <(carapace _carapace zsh)
 
-# ── Fish-parity plugins ─────────────────────────────────────────────────
-# zsh-autosuggestions: greyed-out completion from history; → / End to
-# accept. zsh-syntax-highlighting: invalid commands red, paths blue, etc.
-# Order per upstream README: autosuggestions first, syntax-highlighting
-# last (it wraps every existing ZLE widget at source time).
-# Plugins ship via RPM (silverfox-services) — /usr/share is a stable
-# contract, unlike nix-profile paths that move on version bumps.
-if [[ -r /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh ]]; then
-    source /usr/share/zsh-autosuggestions/zsh-autosuggestions.zsh
-fi
-
 # ── Ctrl-P — VS-Code-style fzf quick-open ──────────────────────────────
 # zsh's ZLE (line editor) is the equivalent of bash's readline.
 # `zle -N` registers a widget; `bindkey '^P'` binds Ctrl-P.
@@ -120,10 +109,11 @@ if (( ${+commands[tmux]} )); then
     bindkey '^[t' _silverfox_tmux_attach_or_create
 fi
 
-# ── Syntax highlighting (MUST load last) ────────────────────────────────
-# zsh-syntax-highlighting wraps every existing ZLE widget at source time.
-# Loading last means Ctrl+P / Alt-S / Ctrl-G widgets above also get
-# colored. Upstream README requires this ordering.
-if [[ -r /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh ]]; then
-    source /usr/share/zsh-syntax-highlighting/zsh-syntax-highlighting.zsh
-fi
+# ── Plugins via sheldon (MUST load last) ────────────────────────────────
+# zsh-autosuggestions (greyed-out history completion; → / End to accept)
+# and zsh-syntax-highlighting (invalid commands red, paths blue, …), in
+# that order — see ~/.config/sheldon/plugins.toml. syntax-highlighting
+# wraps every existing ZLE widget at source time, so sourcing here at the
+# end means the Ctrl-P / Alt-S / Ctrl-G widgets above also get colored.
+# sheldon comes from mise; plugins are cloned by `dots sync`.
+(( ${+commands[sheldon]} )) && eval "$(sheldon source)"
