@@ -32,12 +32,14 @@ compinit -u -d "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump"
 
 # ── Tool inits (zsh-specific eval/source) ──────────────────────────────
 (( ${+commands[starship]} )) && eval "$(starship init zsh)"
+# fzf BEFORE atuin: both bind ^R, last one wins. fzf keeps ^T (file
+# picker) and Alt-C (cd); atuin takes ^R (it disables up-arrow itself).
+(( ${+commands[fzf]} )) && source <(fzf --zsh)
 (( ${+commands[atuin]} )) && eval "$(atuin init zsh --disable-up-arrow)"
 (( ${+commands[zoxide]} )) && eval "$(zoxide init zsh)"
 if (( ${+commands[mise]} )) && [[ -o interactive ]]; then
     eval "$(mise activate zsh)"
 fi
-(( ${+commands[fzf]} )) && source <(fzf --zsh)
 # carapace — 839+ CLI completions; needs compinit (above).
 # Must load before zsh-syntax-highlighting (last rule).
 (( ${+commands[carapace]} )) && source <(carapace _carapace zsh)
@@ -110,10 +112,59 @@ if (( ${+commands[tmux]} )); then
 fi
 
 # ── Plugins via sheldon (MUST load last) ────────────────────────────────
-# zsh-autosuggestions (greyed-out history completion; → / End to accept)
-# and zsh-syntax-highlighting (invalid commands red, paths blue, …), in
+# fzf-tab (Tab → fzf picker over compsys candidates), then
+# zsh-autosuggestions (greyed-out history completion; → / End to accept),
+# then zsh-syntax-highlighting (invalid commands red, paths blue, …), in
 # that order — see ~/.config/sheldon/plugins.toml. syntax-highlighting
 # wraps every existing ZLE widget at source time, so sourcing here at the
 # end means the Ctrl-P / Alt-S / Ctrl-G widgets above also get colored.
 # sheldon comes from mise; plugins are cloned by `dots sync`.
+
+# fzf-tab tuning (zstyles read when the plugin loads below):
+zstyle ':completion:*' menu no                     # hand the menu to fzf-tab
+zstyle ':completion:*:descriptions' format '[%d]'  # group headers in the picker
+# LS_COLORS isn't set by default — dircolors provides it (GNU coreutils;
+# silently skipped where absent, e.g. stock macOS).
+(( ${+commands[dircolors]} )) && [[ -z $LS_COLORS ]] && eval "$(dircolors -b)"
+zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
+zstyle ':fzf-tab:*' switch-group '<' '>'           # cycle candidate groups
+zstyle ':fzf-tab:*' continuous-trigger '/'         # cd dir/<Tab> keeps drilling down
+zstyle ':fzf-tab:*' fzf-pad 4                      # room for the preview border
+
+# Default preview for ANY path candidate: dirs → eza tree, files → bat.
+# $realpath is set by fzf-tab for file/dir candidates; empty otherwise,
+# so non-path completions fall back to showing the candidate description.
+zstyle ':fzf-tab:complete:*:*' fzf-preview \
+    'if [[ -d $realpath ]]; then
+         eza -T -L2 --color=always --icons=always --group-directories-first "$realpath"
+     elif [[ -f $realpath ]]; then
+         bat --color=always --style=numbers --line-range=:200 "$realpath" 2>/dev/null \
+             || file "$realpath"
+     else
+         echo "$desc"
+     fi'
+
+# Context-specific previews (override the default above):
+# git: diff for add/restore targets, log for branches/refs
+zstyle ':fzf-tab:complete:git-(add|diff|restore):*' fzf-preview \
+    'git diff --color=always -- "$realpath" | head -200'
+zstyle ':fzf-tab:complete:git-(checkout|switch|merge|rebase):*' fzf-preview \
+    'case $group in
+     *commit*|*branch*|*tag*|*head*) git log --oneline --color=always -20 "$word" 2>/dev/null ;;
+     *file*) git diff --color=always -- "$realpath" | head -200 ;;
+     *) echo "$desc" ;;
+     esac'
+# env vars: show the value
+zstyle ':fzf-tab:complete:(-parameter-|-brace-parameter-|export|unset):*' fzf-preview \
+    'echo "${(P)word}"'
+# processes: show the full command line
+zstyle ':fzf-tab:complete:(kill|ps):argument-rest' fzf-preview \
+    '[[ $group == *"process"* ]] && ps -p "$word" -o pid,user,etime,args --no-headers 2>/dev/null'
+zstyle ':fzf-tab:complete:(kill|ps):argument-rest' fzf-flags --preview-window=down:3:wrap
+# systemd: unit status
+zstyle ':fzf-tab:complete:systemctl-*:*' fzf-preview \
+    'SYSTEMD_COLORS=1 systemctl status "$word" 2>/dev/null | head -20'
+# man: render the page
+zstyle ':fzf-tab:complete:man:*' fzf-preview 'man "$word" 2>/dev/null | col -bx | head -200'
+
 (( ${+commands[sheldon]} )) && eval "$(sheldon source)"

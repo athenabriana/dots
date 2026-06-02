@@ -4,13 +4,19 @@
 # runs `sheldon lock --update` (bump to latest upstream). The .zshrc
 # sources everything with one `eval "$(sheldon source)"`.
 #
-# Plugins load in definition order. zsh-syntax-highlighting must stay
+# Plugins load in definition order. fzf-tab must come FIRST (before
+# anything that wraps ZLE widgets); zsh-syntax-highlighting must stay
 # LAST (it wraps every ZLE widget that exists at source time — see the
 # .zshrc widget definitions, which load before sheldon).
 #
 # To pin a plugin, add `rev = "<tag-or-sha>"` to its block.
 
 shell = "zsh"
+
+# Tab → fzf picker over the native compsys candidates (carapace data
+# included). Tuning zstyles live in .zshrc, set before sheldon sources.
+[plugins.fzf-tab]
+github = "Aloxaf/fzf-tab"
 
 [plugins.zsh-autosuggestions]
 github = "zsh-users/zsh-autosuggestions"
