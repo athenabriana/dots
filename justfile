@@ -15,6 +15,7 @@
 #   just              # list recipes
 #   just platform     # show what was detected
 #   just sync         # reconcile everything (apt → link → mise → skills → chsh) — run anytime
+#   just upgrade      # upgrade everything (apt upgrade + mise tools), then sync
 #   just link         # stow configs into $HOME
 
 DOTS := justfile_directory()
@@ -32,6 +33,34 @@ sync: _apt link _mise _skills
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
+
+# Upgrade everything to latest (full apt upgrade + mise self-update + tools), then sync.
+upgrade: _apt-upgrade _mise-upgrade sync
+
+# (internal) Full apt upgrade.
+_apt-upgrade:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    case "{{PLAT}}" in
+        wsl|desktop) ;;
+        *) echo "apt upgrade: platform {{PLAT}} not apt-based — skipping." >&2; exit 0 ;;
+    esac
+    echo "apt: upgrading all packages…"
+    sudo apt-get update
+    sudo apt-get upgrade -y
+
+# (internal) Update mise itself, then upgrade tools (re-resolves latest/lts within pins).
+_mise-upgrade:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v mise >/dev/null 2>&1; then
+        echo "mise not found on PATH — skipping mise upgrade." >&2
+        exit 0
+    fi
+    echo "mise: self-update…"
+    mise self-update -y || echo "mise: self-update not supported for this install — skipping." >&2
+    echo "mise: upgrading tools…"
+    mise upgrade
 
 # (internal) Install mise tools from config.toml, then prune unused versions.
 _mise:

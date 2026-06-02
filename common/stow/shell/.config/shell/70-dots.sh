@@ -2,6 +2,7 @@
 #
 # `dots`            → list recipes
 # `dots sync`       → reconcile everything (run anytime)
+# `dots upgrade`    → upgrade everything (apt + mise), then sync
 # `dots link` / `dots windows` / `dots platform` …
 #
 # --justfile pins the recipe file and --working-directory pins the cwd
