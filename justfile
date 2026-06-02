@@ -14,7 +14,7 @@
 # Usage (or via the `dots` shell command from anywhere):
 #   just              # list recipes
 #   just platform     # show what was detected
-#   just sync         # reconcile everything (apt → link → mise → chsh) — run anytime
+#   just sync         # reconcile everything (apt → link → mise → skills → chsh) — run anytime
 #   just link         # stow configs into $HOME
 
 DOTS := justfile_directory()
@@ -27,13 +27,13 @@ default:
 platform:
     @echo "{{PLAT}}"
 
-# Reconcile the whole machine to the dotfiles (apt → link → mise → chsh). Idempotent — run anytime.
-sync: _apt link _mise
+# Reconcile the whole machine to the dotfiles (apt → link → mise → skills → chsh). Idempotent — run anytime.
+sync: _apt link _mise _skills
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
 
-# (internal) Install mise tools from config.toml.
+# (internal) Install mise tools from config.toml, then prune unused versions.
 _mise:
     #!/usr/bin/env bash
     set -euo pipefail
@@ -43,6 +43,25 @@ _mise:
     fi
     echo "mise: installing tools from config.toml…"
     mise install
+    echo "mise: pruning unused tool versions…"
+    mise prune --yes
+
+# (internal) Install/update agent skills from the skills repo (CLI comes from mise).
+_skills:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    if ! command -v skills >/dev/null 2>&1; then
+        echo "skills CLI not found on PATH — skipping agent skills." >&2
+        exit 0
+    fi
+    # The CLI has no quiet flag — keep the full log only for failures.
+    if out=$(skills add athenabriana/skills -g -a claude-code -s '*' -y 2>&1); then
+        n=$(grep -c '✓' <<<"$out" || true)
+        echo "skills: $n installed from athenabriana/skills → ~/.claude/skills"
+    else
+        echo "$out" >&2
+        exit 1
+    fi
 
 # (internal) Install apt packages: common/packages.txt + <platform>/packages.txt.
 _apt:

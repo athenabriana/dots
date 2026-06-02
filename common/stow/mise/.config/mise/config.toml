@@ -24,6 +24,9 @@ zoxide = "latest"
 bat = "latest"
 eza = "latest"
 ripgrep = "latest"
+"npm:@madarco/agentbox" = "latest"
+"github:akitaonrails/ai-jail" = "latest"
+"npm:skills" = "latest"
 
 [settings]
 trusted_config_paths = [ "/" ]
