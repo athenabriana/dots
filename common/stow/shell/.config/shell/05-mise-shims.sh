@@ -1,4 +1,4 @@
-# 50-mise-shims.sh — mise shims on PATH (POSIX).
+# 05-mise-shims.sh — mise shims on PATH (POSIX).
 #
 # Shims work in non-interactive shells (scripts, SSH exec) where the
 # interactive `mise activate` hook isn't loaded. Each rc file then

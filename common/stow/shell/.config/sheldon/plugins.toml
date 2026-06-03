@@ -4,22 +4,35 @@
 # runs `sheldon lock --update` (bump to latest upstream). The .zshrc
 # sources everything with one `eval "$(sheldon source)"`.
 #
-# Plugins load in definition order. fzf-tab must come FIRST (before
-# anything that wraps ZLE widgets); zsh-syntax-highlighting must stay
-# LAST (it wraps every ZLE widget that exists at source time — see the
-# .zshrc widget definitions, which load before sheldon).
+# Plugins load in definition order. zsh-defer must come first (the
+# `defer` template depends on it); fzf-tab before anything that wraps
+# ZLE widgets; zsh-syntax-highlighting LAST (it wraps every ZLE widget
+# that exists at source time). The two heavy plugins are deferred to
+# after the first prompt — zsh-defer preserves their relative order.
 #
 # To pin a plugin, add `rev = "<tag-or-sha>"` to its block.
 
 shell = "zsh"
 
+[templates]
+defer = """{% for file in files %}zsh-defer source "{{ file }}"
+{% endfor %}"""
+
+# Provides `zsh-defer` for the template above — loads eagerly.
+[plugins.zsh-defer]
+github = "romkatv/zsh-defer"
+
 # Tab → fzf picker over the native compsys candidates (carapace data
 # included). Tuning zstyles live in .zshrc, set before sheldon sources.
+# Eager: deferring it would leave a window where Tab falls back to the
+# plain compsys menu.
 [plugins.fzf-tab]
 github = "Aloxaf/fzf-tab"
 
 [plugins.zsh-autosuggestions]
 github = "zsh-users/zsh-autosuggestions"
+apply = ["defer"]
 
 [plugins.zsh-syntax-highlighting]
 github = "zsh-users/zsh-syntax-highlighting"
+apply = ["defer"]

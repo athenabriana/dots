@@ -1,0 +1,14 @@
+# atuin config — shell history (binary via mise, config via stow).
+# Full reference: https://docs.atuin.sh/configuration/config/
+# To share history across machines: `atuin register` (or `atuin login`)
+# once per machine — sync is E2E-encrypted.
+
+# Enter runs the selection immediately; Tab edits it first.
+enter_accept = true
+
+# Compact inline panel under the prompt instead of fullscreen.
+style = "compact"
+inline_height = 24
+
+[sync]
+records = true

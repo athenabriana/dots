@@ -19,6 +19,12 @@ if [ -d "$_dots_modules" ]; then
 fi
 unset _dots_modules
 
+# ── History — append, dedupe, and keep plenty (zsh parity) ────────────
+shopt -s histappend
+HISTSIZE=100000
+HISTFILESIZE=100000
+HISTCONTROL=ignoreboth:erasedups
+
 # ── Tool inits (bash-specific eval/source) ──────────────────────────────
 command -v starship >/dev/null 2>&1 && eval "$(starship init bash)"
 command -v atuin >/dev/null 2>&1 && eval "$(atuin init bash --disable-up-arrow)"

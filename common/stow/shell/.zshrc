@@ -14,6 +14,13 @@ if [ -d "$_dots_modules" ]; then
 fi
 unset _dots_modules
 
+# ── History — zsh's own file feeds zsh-autosuggestions; atuin owns ^R ──
+HISTFILE="${XDG_STATE_HOME:-$HOME/.local/state}/zsh/history"
+[ -d "${HISTFILE:h}" ] || mkdir -p "${HISTFILE:h}"
+HISTSIZE=100000
+SAVEHIST=100000
+setopt share_history hist_ignore_all_dups hist_ignore_space hist_reduce_blanks
+
 # ── compinit — must run before the tool inits below: their `init zsh`
 # output emits `compdef …` lines that need compinit loaded. `-u` skips
 # the group-writable-dir security prompt; `-d` keeps .zcompdump out of

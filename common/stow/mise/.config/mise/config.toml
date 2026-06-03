@@ -25,6 +25,8 @@ zoxide = "latest"
 bat = "latest"
 eza = "latest"
 ripgrep = "latest"
+television = "latest"
+"aqua:joshmedeski/sesh" = "latest"
 "npm:skills" = "latest"
 
 [settings]
