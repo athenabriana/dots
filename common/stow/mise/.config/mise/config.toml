@@ -1,3 +1,6 @@
+# Toolchains and runtimes — things projects pin via .tool-versions /
+# idiomatic version files. Latest-only CLI apps live in common/Brewfile;
+# the split: mise = versioned per project, brew = system-wide latest.
 [tools]
 node = "lts"
 bun = "latest"
@@ -8,25 +11,11 @@ go = "latest"
 rust = "stable"
 java = "21"
 maven = "latest"
-gcloud = "latest"
-
-# CLI tools
-gh = "latest"
-claude = "latest"
-delta = "latest"
-lazygit = "latest"
 terraform = "latest"
-starship = "latest"
-sheldon = "latest"
-fzf = "latest"
-atuin = "latest"
-carapace = "latest"
-zoxide = "latest"
-bat = "latest"
-eza = "latest"
-ripgrep = "latest"
-television = "latest"
-"aqua:joshmedeski/sesh" = "latest"
+
+# No brew formula on Linux — stay in mise regardless of tier.
+gcloud = "latest"
+claude = "latest"
 "npm:skills" = "latest"
 "npm:agent-browser" = "latest"
 

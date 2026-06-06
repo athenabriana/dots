@@ -1,10 +1,11 @@
 # justfile — cross-platform dotfiles bootstrap.
 #
 # Structure (per-platform subfolders):
-#   common/   stow packages + packages.txt applied everywhere
-#   wsl/      headless WSL extras (apt)
-#   desktop/  Ubuntu-family desktop extras + GUI stow packages (apt)
-# fedora/macos detection exists (lib/detect.sh) but isn't wired up yet.
+#   common/   stow packages + Brewfile applied everywhere
+#   wsl/      headless WSL extras
+#   desktop/  Ubuntu-family desktop extras (Brewfile + GUI stow packages)
+# The system layer comes from brew (see common/Brewfile); fedora/macos
+# detection exists (lib/detect.sh) and brew covers them too.
 #
 # The platform is auto-detected (lib/detect.sh); override with PLAT=…,
 # e.g. `just PLAT=desktop link`.
@@ -13,7 +14,7 @@
 #   just              # list recipes
 #   just platform     # show what was detected
 #   just sync         # reconcile everything — run anytime
-#   just upgrade      # upgrade everything (apt upgrade + mise + zsh plugins), then sync
+#   just upgrade      # upgrade everything (brew + mise + zsh plugins), then sync
 #   just link         # stow configs into $HOME
 
 DOTS := justfile_directory()
@@ -26,14 +27,14 @@ default:
 platform:
     @echo "{{PLAT}}"
 
-# Reconcile the whole machine to the dotfiles (pull → apt → link → mise → sheldon → skills → tmux plugins → pass → chsh). Idempotent — run anytime.
-sync: _pull _apt link _mise _sheldon _skills _tmux-plugins _pass
+# Reconcile the whole machine to the dotfiles (pull → brew → link → mise → sheldon → skills → tmux plugins → pass → chsh). Idempotent — run anytime.
+sync: _pull _brew link _mise _sheldon _skills _tmux-plugins _pass
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
 
-# Upgrade everything to latest (apt upgrade + mise self-update/tools + zsh plugins), then sync.
-upgrade: _pull _apt-upgrade _mise-upgrade _sheldon-upgrade sync
+# Upgrade everything to latest (brew + mise self-update/tools + zsh plugins), then sync.
+upgrade: _pull _brew-upgrade _mise-upgrade _sheldon-upgrade sync
 
 # (internal) Fast-forward the dotfiles repo. Skips the pull if the tree
 # is dirty or the branch diverged — never stashes/merges.
@@ -62,6 +63,7 @@ _pull:
 _sheldon:
     #!/usr/bin/env bash
     set -euo pipefail
+    source "{{DOTS}}/lib/brewenv.sh"
     if ! command -v sheldon >/dev/null 2>&1; then
         echo "sheldon not found on PATH — skipping zsh plugins." >&2
         exit 0
@@ -73,6 +75,7 @@ _sheldon:
 _sheldon-upgrade:
     #!/usr/bin/env bash
     set -euo pipefail
+    source "{{DOTS}}/lib/brewenv.sh"
     if ! command -v sheldon >/dev/null 2>&1; then
         echo "sheldon not found on PATH — skipping zsh plugin upgrade." >&2
         exit 0
@@ -80,28 +83,30 @@ _sheldon-upgrade:
     echo "sheldon: updating zsh plugins…"
     sheldon lock --update
 
-# (internal) Full apt upgrade.
-_apt-upgrade:
+# (internal) Update brew itself, then upgrade all formulae.
+_brew-upgrade:
     #!/usr/bin/env bash
     set -euo pipefail
-    case "{{PLAT}}" in
-        wsl|desktop) ;;
-        *) echo "apt upgrade: platform {{PLAT}} not apt-based — skipping." >&2; exit 0 ;;
-    esac
-    echo "apt: upgrading all packages…"
-    sudo apt-get update
-    sudo apt-get upgrade -y
+    source "{{DOTS}}/lib/brewenv.sh"
+    if ! command -v brew >/dev/null 2>&1; then
+        echo "brew not found — skipping brew upgrade." >&2
+        exit 0
+    fi
+    echo "brew: updating…"
+    brew update --quiet
+    echo "brew: upgrading formulae…"
+    brew upgrade
 
-# (internal) Update mise itself, then upgrade tools (re-resolves latest/lts within pins).
+# (internal) Upgrade mise tools (re-resolves latest/lts within pins).
+# The mise binary itself comes from brew — _brew-upgrade covers it.
 _mise-upgrade:
     #!/usr/bin/env bash
     set -euo pipefail
+    source "{{DOTS}}/lib/brewenv.sh"
     if ! command -v mise >/dev/null 2>&1; then
         echo "mise not found on PATH — skipping mise upgrade." >&2
         exit 0
     fi
-    echo "mise: self-update…"
-    mise self-update -y || echo "mise: self-update not supported for this install — skipping." >&2
     echo "mise: upgrading tools…"
     mise upgrade
 
@@ -109,6 +114,7 @@ _mise-upgrade:
 _mise:
     #!/usr/bin/env bash
     set -euo pipefail
+    source "{{DOTS}}/lib/brewenv.sh"
     if ! command -v mise >/dev/null 2>&1; then
         echo "mise not found on PATH — skipping mise tools." >&2
         exit 0
@@ -168,37 +174,38 @@ _pass:
         fi
     fi
 
-# (internal) Install apt packages: common/packages.txt + <platform>/packages.txt.
-_apt:
+# (internal) Install system packages: common/Brewfile + <platform>/Brewfile.
+_brew:
     #!/usr/bin/env bash
     set -euo pipefail
-    case "{{PLAT}}" in
-        wsl|desktop) ;;
-        fedora) echo "fedora (dnf) install not wired up yet" >&2; exit 1 ;;
-        macos)  echo "macos (brew) install not wired up yet" >&2; exit 1 ;;
-        *)      echo "unknown platform — set PLAT=wsl|desktop" >&2; exit 1 ;;
-    esac
-    files=("{{DOTS}}/common/packages.txt")
-    [ -f "{{DOTS}}/{{PLAT}}/packages.txt" ] && files+=("{{DOTS}}/{{PLAT}}/packages.txt")
-    pkgs=$(grep -hvE '^\s*(#|$)' "${files[@]}" | sort -u)
-    missing=()
-    for p in $pkgs; do
-        if ! dpkg-query -W -f='${Status}' "$p" 2>/dev/null | grep -q 'install ok installed'; then
-            missing+=("$p")
+    source "{{DOTS}}/lib/brewenv.sh"
+    if ! command -v brew >/dev/null 2>&1; then
+        # Assumes curl/git/procps/file on the host (Ubuntu/WSL ships them).
+        echo "brew: not found — installing Homebrew…"
+        # NONINTERACTIVE makes the installer check sudo with -n (no prompt),
+        # so cache the credentials first.
+        sudo -v
+        NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+        source "{{DOTS}}/lib/brewenv.sh"
+    fi
+    files=("{{DOTS}}/common/Brewfile")
+    [ -f "{{DOTS}}/{{PLAT}}/Brewfile" ] && files+=("{{DOTS}}/{{PLAT}}/Brewfile")
+    for f in "${files[@]}"; do
+        rel="${f#"{{DOTS}}/"}"
+        if brew bundle check --file "$f" >/dev/null 2>&1; then
+            echo "brew: $rel already satisfied."
+        else
+            echo "brew: bundling $rel…"
+            brew bundle --file "$f"
         fi
     done
-    if [ ${#missing[@]} -eq 0 ]; then
-        echo "apt: all packages already installed."
-    else
-        echo "apt: installing ${missing[*]}"
-        sudo apt-get update
-        sudo apt-get install -y "${missing[@]}"
-    fi
 
 # Stow common/ + <platform>/ packages into $HOME (backs up real files).
 link:
     #!/usr/bin/env bash
     set -euo pipefail
+    # brew's stow (2.4.x); the recipe still works with any stow on PATH.
+    source "{{DOTS}}/lib/brewenv.sh"
     backup="$HOME/.dots-backup"
     # Each stow root contributes its packages. common always; the
     # detected platform's stow/ dir if it has any packages.
@@ -219,11 +226,7 @@ link:
                 fi
             done < <(find "$root/$pkg" -type f -print0)
         done
-        # stow 2.3.1 prints a spurious "BUG in find_stowed_path?" warning for
-        # every unowned *absolute* symlink in $HOME (e.g. ~/.aws → /mnt/c/…).
-        # Harmless, fixed in stow 2.4.0 — drop the filter once apt ships it.
-        stow -R --no-folding -d "$root" -t "$HOME" "${packages[@]}" \
-            2> >(grep -v 'BUG in find_stowed_path' >&2 || true)
+        stow -R --no-folding -d "$root" -t "$HOME" "${packages[@]}"
         echo "stowed from ${root#"{{DOTS}}/"}: ${packages[*]}"
     done
 
@@ -245,6 +248,7 @@ windows:
 chsh shell="zsh":
     #!/usr/bin/env bash
     set -euo pipefail
+    source "{{DOTS}}/lib/brewenv.sh"
     target="{{shell}}"
     case "$target" in
         bash|zsh) ;;
@@ -256,6 +260,11 @@ chsh shell="zsh":
     if [ "$current" = "$bin" ]; then
         echo "Already on $target ($bin)."
         exit 0
+    fi
+    # login tooling (chsh, some PAM setups) only accepts shells listed here
+    if ! grep -qx "$bin" /etc/shells; then
+        echo "$bin" | sudo tee -a /etc/shells >/dev/null
+        echo "added $bin to /etc/shells"
     fi
     sudo usermod -s "$bin" "$USER"
     echo "Login shell set to $bin. Log out/in, or run 'exec $target -l' now."

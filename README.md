@@ -3,7 +3,7 @@
 # dots
 
 [![platform](https://img.shields.io/badge/platform-wsl2%20%7C%20ubuntu-111111?style=flat-square)](#)
-[![stack](https://img.shields.io/badge/stack-stow%20%2B%20mise%20%2B%20just-111111?style=flat-square)](#)
+[![stack](https://img.shields.io/badge/stack-brew%20%2B%20mise%20%2B%20stow-111111?style=flat-square)](#)
 
 _one `just sync` from a fresh shell to home._
 
@@ -12,7 +12,9 @@ _one `just sync` from a fresh shell to home._
 bootstrap a fresh machine:
 
 ```bash
-sudo apt-get install -y git just
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
+brew install just
 git clone git@github.com:athenabriana/dots.git ~/Dots
 cd ~/Dots && just sync
 ```
@@ -33,7 +35,7 @@ dots upgrade
 
 | layer            | managed by | where                                          |
 | ---------------- | ---------- | ---------------------------------------------- |
-| system bootstrap | apt        | `common/packages.txt` + `<plat>/packages.txt`  |
+| system layer     | brew       | `common/Brewfile` + `<plat>/Brewfile`          |
 | CLI tools        | mise       | `common/stow/mise/.config/mise/config.toml`    |
 | configs          | stow       | `common/stow/` + `wsl/stow/` + `desktop/stow/` |
 | zsh plugins      | sheldon    | stowed `plugins.toml`, locked by `sync`        |

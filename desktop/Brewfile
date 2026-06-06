@@ -1,0 +1,10 @@
+# Brewfile — Ubuntu-family desktop extras, merged on top of common/Brewfile.
+#
+# GUI apps aren't brewable on Linux (casks are macOS-only):
+#   - ghostty → PPA or build; see its install docs.
+#   - zed     → official installer (zed.dev) or flatpak.
+# Their stow configs live in desktop/stow/ regardless; handle the installs
+# in a dedicated recipe when fleshing out desktop support.
+
+brew "tmux"
+brew "wl-clipboard"
