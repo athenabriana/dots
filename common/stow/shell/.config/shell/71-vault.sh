@@ -3,8 +3,9 @@
 # cloned at ~/vault; inert until it exists.
 #
 # `vault`         → list recipes
-# `vault sync`    → pull, unlock, stow
 # `vault save`    → commit everything and push
+# `vault unlock`  → decrypt the working tree
+# `vault lock`    → re-encrypt the working tree
 
 if command -v just >/dev/null 2>&1 && [ -f "$HOME/vault/justfile" ]; then
     vault() {

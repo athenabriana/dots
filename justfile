@@ -155,21 +155,20 @@ _tmux-plugins:
         fi
     done
 
-# (internal) Sync the private vault — delegates to the vault's own
-# justfile (`vault sync`: pull, git-crypt unlock, stow into $HOME).
+# (internal) Pull the private vault. Unlocking is deliberate, not part
+# of sync — run `vault unlock` yourself when you need the plaintext.
 # The vault repo is private and intentionally not cited here — clone it
 # to ~/vault once and this recipe takes over. Soft-fails so a fresh
-# machine without the gpg key still finishes `dots sync`.
+# machine still finishes `dots sync`.
 _vault:
     #!/usr/bin/env bash
     set -euo pipefail
-    source "{{DOTS}}/lib/brewenv.sh"
-    if [ ! -f "$HOME/vault/justfile" ]; then
+    if [ ! -d "$HOME/vault/.git" ]; then
         echo "vault: ~/vault not present — clone your private vault to enable." >&2
         exit 0
     fi
-    just --justfile "$HOME/vault/justfile" --working-directory "$HOME/vault" sync \
-        || echo "vault: sync failed — restore the gpg key and run 'vault sync'." >&2
+    git -C "$HOME/vault" pull --ff-only --quiet \
+        || echo "vault: cannot fast-forward — skipping pull." >&2
 
 # (internal) Install system packages: common/Brewfile + <platform>/Brewfile.
 _brew:
