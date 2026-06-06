@@ -11,6 +11,9 @@
 #   - stow: the config linker (perl script, no binary release)
 #   - just: runs this justfile
 #   - unzip: some tool installers still expect it
+#   - pass: password manager (shell script, no binary release — same
+#     bucket as stow); pulls in gnupg as a dependency. The store itself
+#     is a separate private repo (athenabriana/pass) synced by `_pass`.
 #
 # Everything else is managed by mise — see mise/.config/mise/config.toml.
 # mise pins latest, verifies checksums/attestations, and works the same
@@ -28,3 +31,4 @@ ca-certificates
 stow
 just
 unzip
+pass

@@ -26,8 +26,8 @@ default:
 platform:
     @echo "{{PLAT}}"
 
-# Reconcile the whole machine to the dotfiles (pull → apt → link → mise → sheldon → skills → tmux plugins → chsh). Idempotent — run anytime.
-sync: _pull _apt link _mise _sheldon _skills _tmux-plugins
+# Reconcile the whole machine to the dotfiles (pull → apt → link → mise → sheldon → skills → tmux plugins → pass → chsh). Idempotent — run anytime.
+sync: _pull _apt link _mise _sheldon _skills _tmux-plugins _pass
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
@@ -148,6 +148,25 @@ _tmux-plugins:
             git clone --quiet --depth 1 "https://github.com/tmux-plugins/$repo" "$dir/$name"
         fi
     done
+
+# (internal) Sync the password store: clone the private repo on first run,
+# fast-forward after. Skips gracefully until the repo/SSH key exists.
+_pass:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    # stow creates ~/.gnupg with the default umask; gpg refuses to trust it.
+    [ -d "$HOME/.gnupg" ] && chmod 700 "$HOME/.gnupg"
+    store="$HOME/.password-store"
+    if [ -d "$store/.git" ]; then
+        git -C "$store" pull --ff-only --quiet \
+            || echo "pass: cannot fast-forward store — skipping." >&2
+    elif [ ! -e "$store" ]; then
+        if git clone --quiet git@github.com:athenabriana/pass.git "$store" 2>/dev/null; then
+            echo "pass: cloned password store → ~/.password-store"
+        else
+            echo "pass: store repo not reachable (not created yet, or no SSH key) — skipping." >&2
+        fi
+    fi
 
 # (internal) Install apt packages: common/packages.txt + <platform>/packages.txt.
 _apt:
