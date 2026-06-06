@@ -200,7 +200,11 @@ link:
                 fi
             done < <(find "$root/$pkg" -type f -print0)
         done
-        stow -R --no-folding -d "$root" -t "$HOME" "${packages[@]}"
+        # stow 2.3.1 prints a spurious "BUG in find_stowed_path?" warning for
+        # every unowned *absolute* symlink in $HOME (e.g. ~/.aws → /mnt/c/…).
+        # Harmless, fixed in stow 2.4.0 — drop the filter once apt ships it.
+        stow -R --no-folding -d "$root" -t "$HOME" "${packages[@]}" \
+            2> >(grep -v 'BUG in find_stowed_path' >&2 || true)
         echo "stowed from ${root#"{{DOTS}}/"}: ${packages[*]}"
     done
 

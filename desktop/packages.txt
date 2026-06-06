@@ -2,14 +2,18 @@
 # (Ubuntu, Zorin, Mint, …). Merged on top of common/packages.txt.
 #
 # These are the GUI / desktop-only extras that headless WSL skips. The
-# matching stow configs live in desktop/stow/ (ghostty, zed, tmux,
-# television) and are linked by `just link` only on the desktop platform.
+# matching stow configs live in desktop/stow/ (ghostty, zed, tmux) and
+# are linked by `just link` only on the desktop platform.
 #
 # NOTE: not everything desktop has an apt package:
 #   - ghostty     → not in apt; PPA or build. See its install docs.
 #   - zed         → not in apt; official installer (zed.dev) or flatpak.
-#   - television  → not in apt; install the `tv` binary (cargo / release).
 #   - sesh        → not in apt; go install / release binary.
+#
+# television (tv) + its `t()` session picker live in common/ now: tv and
+# sesh install via common mise, and the t() function in common shell
+# aliases runs wherever they're present (incl. WSL), so the channel
+# config (common/stow/television) must be linked everywhere too.
 # Handle those in a dedicated recipe when fleshing out desktop support;
 # for now apt covers what it can and the rest is documented here.
 

@@ -43,27 +43,43 @@ if (-not (Test-Path $wt)) {
 
 $raw = Get-Content -Raw -Path $wt
 if ($raw -match [regex]::Escape($FontFace)) {
-    Write-Host "==> Windows Terminal already uses '$FontFace'. Nothing to change."
-    exit 0
+    Write-Host "==> Windows Terminal already uses '$FontFace'."
+} else {
+    Copy-Item $wt "$wt.bak" -Force
+    Write-Host "==> Backed up settings.json -> settings.json.bak"
+
+    # settings.json ships with `"defaults": {}`. Inject the font there so
+    # every profile (incl. Ubuntu) inherits it, without touching anything
+    # else. Uses a text replace to tolerate the JSONC comments WT allows.
+    $block   = '"defaults": { "font": { "face": "' + $FontFace + '" } }'
+    $patched = [regex]::Replace($raw, '"defaults"\s*:\s*\{\s*\}', $block, 1)
+
+    if ($patched -eq $raw) {
+        Write-Warning ("Couldn't auto-insert the font (defaults block isn't empty). " +
+            "Set it manually: Settings > Profiles > Defaults > Appearance > Font face = '$FontFace'.")
+    } else {
+        Set-Content -Path $wt -Value $patched -Encoding UTF8
+        Write-Host "==> Set default font.face = '$FontFace'. Restart Windows Terminal to apply."
+    }
 }
 
-Copy-Item $wt "$wt.bak" -Force
-Write-Host "==> Backed up settings.json -> settings.json.bak"
-
-# settings.json ships with `"defaults": {}`. Inject the font there so
-# every profile (incl. Ubuntu) inherits it, without touching anything
-# else. Uses a text replace to tolerate the JSONC comments WT allows.
-$block   = '"defaults": { "font": { "face": "' + $FontFace + '" } }'
-$patched = [regex]::Replace($raw, '"defaults"\s*:\s*\{\s*\}', $block, 1)
-
-if ($patched -eq $raw) {
-    Write-Warning ("Couldn't auto-insert the font (defaults block isn't empty). " +
-        "Set it manually: Settings > Profiles > Defaults > Appearance > Font face = '$FontFace'.")
-    exit 0
+# --- Close the tab whenever the shell exits ---
+# WT's default ("graceful") only closes the tab on a zero exit code, and
+# zsh's bare `exit` propagates the last command's status — so the pane
+# lingers with "[process exited with code N]" after any failed command.
+# "always" closes the tab on any exit.
+$settings = Get-Content -Raw -Path $wt | ConvertFrom-Json
+if (-not $settings.profiles.defaults) {
+    $settings.profiles | Add-Member -NotePropertyName defaults `
+        -NotePropertyValue ([pscustomobject]@{}) -Force
 }
-
-Set-Content -Path $wt -Value $patched -Encoding UTF8
-Write-Host "==> Set default font.face = '$FontFace'. Restart Windows Terminal to apply."
+if ($settings.profiles.defaults.closeOnExit -ne "always") {
+    Copy-Item $wt "$wt.bak" -Force
+    $settings.profiles.defaults | Add-Member -NotePropertyName closeOnExit `
+        -NotePropertyValue "always" -Force
+    $settings | ConvertTo-Json -Depth 32 | Set-Content -Path $wt -Encoding UTF8
+    Write-Host "==> Set profiles.defaults.closeOnExit = 'always' (exit closes the tab)."
+}
 
 # --- Merge ghostty-parity keybindings into Windows Terminal "actions" ---
 # Structured JSON merge (settings.json is plain JSON, no comments). Each

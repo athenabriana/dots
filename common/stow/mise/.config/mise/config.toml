@@ -28,6 +28,7 @@ ripgrep = "latest"
 television = "latest"
 "aqua:joshmedeski/sesh" = "latest"
 "npm:skills" = "latest"
+"npm:agent-browser" = "latest"
 
 [settings]
 trusted_config_paths = [ "/" ]

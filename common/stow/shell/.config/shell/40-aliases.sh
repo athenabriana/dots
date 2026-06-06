@@ -17,6 +17,11 @@ if [ -z "${DOTS_AGENT_SHELL:-}" ]; then
         alias cat='bat --paging=never --style=plain'
         # bare `bat` keeps the full pager + theme + line numbers
     fi
+    if command -v claude >/dev/null 2>&1; then
+        # Always launch Claude Code with permission prompts bypassed.
+        # `\claude` (backslash-escaped) still runs the plain binary.
+        alias claude='claude --dangerously-skip-permissions'
+    fi
     if command -v tmux >/dev/null 2>&1 && command -v sesh >/dev/null 2>&1 && command -v tv >/dev/null 2>&1; then
         # `t` — tmux session entrypoint.
         #   `t`           → tv picker over the `sesh` channel; picks an
