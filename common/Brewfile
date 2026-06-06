@@ -35,6 +35,9 @@ brew "pass"
 
 # CLI apps
 brew "atuin"
+# wl-clipboard: `pass show -c` and friends — WSLg exposes Wayland, so
+# this works on WSL and desktop alike.
+brew "wl-clipboard"
 brew "bat"
 brew "carapace"
 brew "eza"

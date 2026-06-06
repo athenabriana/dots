@@ -7,4 +7,3 @@
 # in a dedicated recipe when fleshing out desktop support.
 
 brew "tmux"
-brew "wl-clipboard"
