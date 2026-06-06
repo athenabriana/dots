@@ -14,8 +14,8 @@
 #   - stow: the config linker
 #   - just: runs this justfile
 #   - unzip: some tool installers still expect it
-#   - pass: password manager; pulls gnupg + pinentry as deps. The store
-#     itself is a separate private repo (athenabriana/pass) synced by `_pass`.
+#   - gnupg: gpg-agent (also serves SSH — see gpg-agent.conf) and the
+#     key that unlocks the vault; pulls pinentry as a dep
 #
 # Below the system layer come the CLI apps: latest-only tools with no
 # per-project pinning. Toolchains/runtimes (node, python, go, …) are
@@ -31,11 +31,11 @@ brew "mise"
 brew "stow"
 brew "just"
 brew "unzip"
-brew "pass"
+brew "gnupg"
 
 # CLI apps
 brew "atuin"
-# wl-clipboard: `pass show -c` and friends — WSLg exposes Wayland, so
+# wl-clipboard: clipboard from the CLI — WSLg exposes Wayland, so
 # this works on WSL and desktop alike.
 brew "wl-clipboard"
 brew "bat"
@@ -43,6 +43,9 @@ brew "carapace"
 brew "eza"
 brew "fzf"
 brew "gh"
+# git-crypt: transparent encryption for the private vault (~/vault),
+# unlocked by the same GPG key as pass; synced by `_vault`.
+brew "git-crypt"
 brew "git-delta"
 brew "lazygit"
 brew "ripgrep"

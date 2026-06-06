@@ -27,8 +27,8 @@ default:
 platform:
     @echo "{{PLAT}}"
 
-# Reconcile the whole machine to the dotfiles (pull → brew → link → mise → sheldon → skills → tmux plugins → pass → chsh). Idempotent — run anytime.
-sync: _pull _brew link _mise _sheldon _skills _tmux-plugins _pass
+# Reconcile the whole machine to the dotfiles (pull → brew → link → mise → sheldon → skills → tmux plugins → vault → chsh). Idempotent — run anytime.
+sync: _pull _brew link _mise _sheldon _skills _tmux-plugins _vault
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
@@ -155,24 +155,21 @@ _tmux-plugins:
         fi
     done
 
-# (internal) Sync the password store: clone the private repo on first run,
-# fast-forward after. Skips gracefully until the repo/SSH key exists.
-_pass:
+# (internal) Sync the private vault — delegates to the vault's own
+# justfile (`vault sync`: pull, git-crypt unlock, stow into $HOME).
+# The vault repo is private and intentionally not cited here — clone it
+# to ~/vault once and this recipe takes over. Soft-fails so a fresh
+# machine without the gpg key still finishes `dots sync`.
+_vault:
     #!/usr/bin/env bash
     set -euo pipefail
-    # stow creates ~/.gnupg with the default umask; gpg refuses to trust it.
-    [ -d "$HOME/.gnupg" ] && chmod 700 "$HOME/.gnupg"
-    store="$HOME/.password-store"
-    if [ -d "$store/.git" ]; then
-        git -C "$store" pull --ff-only --quiet \
-            || echo "pass: cannot fast-forward store — skipping." >&2
-    elif [ ! -e "$store" ]; then
-        if git clone --quiet git@github.com:athenabriana/pass.git "$store" 2>/dev/null; then
-            echo "pass: cloned password store → ~/.password-store"
-        else
-            echo "pass: store repo not reachable (not created yet, or no SSH key) — skipping." >&2
-        fi
+    source "{{DOTS}}/lib/brewenv.sh"
+    if [ ! -f "$HOME/vault/justfile" ]; then
+        echo "vault: ~/vault not present — clone your private vault to enable." >&2
+        exit 0
     fi
+    just --justfile "$HOME/vault/justfile" --working-directory "$HOME/vault" sync \
+        || echo "vault: sync failed — restore the gpg key and run 'vault sync'." >&2
 
 # (internal) Install system packages: common/Brewfile + <platform>/Brewfile.
 _brew:

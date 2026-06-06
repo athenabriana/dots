@@ -1,4 +1,4 @@
-# 06-gpg.sh — gpg/pass environment (POSIX).
+# 06-gpg.sh — gpg environment (POSIX).
 #
 # GPG_TTY: pinentry-curses needs to know which terminal to draw on;
 # without it gpg fails with "no tty" in plain terminal sessions.

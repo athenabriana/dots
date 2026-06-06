@@ -39,6 +39,6 @@ dots upgrade
 | CLI tools        | mise       | `common/stow/mise/.config/mise/config.toml`    |
 | configs          | stow       | `common/stow/` + `wsl/stow/` + `desktop/stow/` |
 | zsh plugins      | sheldon    | stowed `plugins.toml`, locked by `sync`        |
-| password store   | pass       | separate private repo, cloned by `sync`        |
+| private configs  | git-crypt  | private vault stowed by `sync` when present    |
 
 the platform (`wsl`/`desktop`) is auto-detected, override with `just PLAT=… <recipe>`. `just windows` configures the windows host (font + terminal) from inside WSL.
