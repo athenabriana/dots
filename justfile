@@ -27,8 +27,8 @@ default:
 platform:
     @echo "{{PLAT}}"
 
-# Reconcile the whole machine to the dotfiles (pull → brew → link → mise → sheldon → skills → tmux plugins → vault → chsh). Idempotent — run anytime.
-sync: _pull _brew link _mise _sheldon _skills _tmux-plugins _vault
+# Reconcile the whole machine to the dotfiles (pull → brew → link → mise → sheldon → skills → tmux plugins → chsh). Idempotent — run anytime.
+sync: _pull _brew link _mise _sheldon _skills _tmux-plugins
     @just chsh zsh
     @echo ""
     @echo "Synced ({{PLAT}}). Open a new terminal (or 'exec zsh -l') if the shell changed."
@@ -158,21 +158,6 @@ _tmux-plugins:
             git clone --quiet --depth 1 "https://github.com/tmux-plugins/$repo" "$dir/$name"
         fi
     done
-
-# (internal) Pull the private vault. Unlocking is deliberate, not part
-# of sync — run `vault unlock` yourself when you need the plaintext.
-# The vault repo is private and intentionally not cited here — clone it
-# to ~/vault once and this recipe takes over. Soft-fails so a fresh
-# machine still finishes `dots sync`.
-_vault:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    if [ ! -d "$HOME/vault/.git" ]; then
-        echo "vault: ~/vault not present — clone your private vault to enable." >&2
-        exit 0
-    fi
-    git -C "$HOME/vault" pull --ff-only --quiet \
-        || echo "vault: cannot fast-forward — skipping pull." >&2
 
 # (internal) Reconcile system packages to the Brewfile: install what's
 # missing AND uninstall what's no longer listed (declarative). common/ +

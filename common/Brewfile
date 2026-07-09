@@ -14,8 +14,6 @@
 #   - stow: the config linker
 #   - just: runs this justfile
 #   - unzip: some tool installers still expect it
-#   - gnupg: gpg-agent (also serves SSH — see gpg-agent.conf) and the
-#     key that unlocks the vault; pulls pinentry as a dep
 #
 # Below the system layer come the CLI apps: latest-only tools with no
 # per-project pinning. Toolchains/runtimes (node, python, go, …) are
@@ -30,7 +28,6 @@ brew "curl"
 brew "stow"
 brew "just"
 brew "unzip"
-brew "gnupg"
 
 # CLI apps
 brew "atuin"
@@ -42,9 +39,6 @@ brew "carapace"
 brew "eza"
 brew "fzf"
 brew "gh"
-# git-crypt: transparent encryption for the private vault (~/vault),
-# unlocked by the same GPG key as pass; synced by `_vault`.
-brew "git-crypt"
 brew "git-delta"
 brew "lazygit"
 brew "ripgrep"
