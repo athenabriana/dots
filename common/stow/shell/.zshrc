@@ -130,58 +130,31 @@ if (( ${+commands[tmux]} )); then
     bindkey '^[t' _dots_tmux_attach_or_create
 fi
 
-# ── Plugins via sheldon (MUST load last) ────────────────────────────────
-# Order lives in ~/.config/sheldon/plugins.toml: fzf-tab, then
-# zsh-autosuggestions, then zsh-syntax-highlighting — the latter wraps
-# every ZLE widget that exists at source time, so loading at the end
-# also covers the widgets defined above. Plugins are cloned by `dots sync`.
-
-# fzf-tab tuning (zstyles read when the plugin loads below):
-zstyle ':completion:*' menu no                     # hand the menu to fzf-tab
-zstyle ':completion:*:descriptions' format '[%d]'  # group headers in the picker
+# ── Native completion — zsh's own compsys menu, tuned so it isn't crude ──
+zstyle ':completion:*' menu select                 # arrow-navigable menu
+# case-insensitive + substring: `dow`→Downloads, `loads`→Downloads.
+zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'l:|=* r:|=*'
+zstyle ':completion:*:descriptions' format '[%d]'  # group headers
+zstyle ':completion:*' group-name ''               # group candidates by type
 # LS_COLORS isn't set by default — dircolors provides it (GNU coreutils;
 # silently skipped where absent, e.g. stock macOS).
 (( ${+commands[dircolors]} )) && [[ -z $LS_COLORS ]] && eval "$(dircolors -b)"
 zstyle ':completion:*' list-colors ${(s.:.)LS_COLORS}
-zstyle ':fzf-tab:*' switch-group '<' '>'           # cycle candidate groups
-zstyle ':fzf-tab:*' continuous-trigger '/'         # cd dir/<Tab> keeps drilling down
-zstyle ':fzf-tab:*' fzf-pad 4                      # room for the preview border
+zstyle ':completion:*' rehash true                 # notice newly-installed binaries
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
+setopt COMPLETE_IN_WORD ALWAYS_TO_END              # complete mid-word; cursor to end
 
-# Default preview for ANY path candidate: dirs → eza tree, files → bat.
-# $realpath is set by fzf-tab for file/dir candidates; empty otherwise,
-# so non-path completions fall back to showing the candidate description.
-zstyle ':fzf-tab:complete:*:*' fzf-preview \
-    'if [[ -d $realpath ]]; then
-         eza -T -L2 --color=always --icons=always --group-directories-first "$realpath"
-     elif [[ -f $realpath ]]; then
-         bat --color=always --style=numbers --line-range=:200 "$realpath" 2>/dev/null \
-             || file "$realpath"
-     else
-         echo "$desc"
-     fi'
+# fzf's shell integration (loaded above) grabs Tab for its own fuzzy
+# completer; take Tab back for the native menu. fzf keeps ^T (files) and
+# Alt-C (cd); ^R is atuin. This also drops fzf's `**<Tab>` trigger.
+bindkey '^I' expand-or-complete
 
-# Context-specific previews (override the default above):
-# git: diff for add/restore targets, log for branches/refs
-zstyle ':fzf-tab:complete:git-(add|diff|restore):*' fzf-preview \
-    'git diff --color=always -- "$realpath" | head -200'
-zstyle ':fzf-tab:complete:git-(checkout|switch|merge|rebase):*' fzf-preview \
-    'case $group in
-     *commit*|*branch*|*tag*|*head*) git log --oneline --color=always -20 "$word" 2>/dev/null ;;
-     *file*) git diff --color=always -- "$realpath" | head -200 ;;
-     *) echo "$desc" ;;
-     esac'
-# env vars: show the value
-zstyle ':fzf-tab:complete:(-parameter-|-brace-parameter-|export|unset):*' fzf-preview \
-    'echo "${(P)word}"'
-# processes: show the full command line
-zstyle ':fzf-tab:complete:(kill|ps):argument-rest' fzf-preview \
-    '[[ $group == *"process"* ]] && ps -p "$word" -o pid,user,etime,args --no-headers 2>/dev/null'
-zstyle ':fzf-tab:complete:(kill|ps):argument-rest' fzf-flags --preview-window=down:3:wrap
-# systemd: unit status
-zstyle ':fzf-tab:complete:systemctl-*:*' fzf-preview \
-    'SYSTEMD_COLORS=1 systemctl status "$word" 2>/dev/null | head -20'
-# man: render the page
-zstyle ':fzf-tab:complete:man:*' fzf-preview 'man "$word" 2>/dev/null | col -bx | head -200'
+# ── Plugins via sheldon (MUST load last) ────────────────────────────────
+# Order lives in ~/.config/sheldon/plugins.toml: zsh-autosuggestions, then
+# zsh-syntax-highlighting — the latter wraps every ZLE widget that exists at
+# source time, so loading at the end covers the widgets defined above. Both
+# are deferred to after the first prompt. Plugins are cloned by `dots sync`.
 
 # --dep: `sheldon source` output changes when plugins.toml does, not
 # only when the binary does.
