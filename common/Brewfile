@@ -1,16 +1,16 @@
-# Brewfile — system layer shared by every platform.
+# Brewfile — system layer + CLI apps, shared by every platform.
 #
-# Installed by `just sync` (_brew) via `brew bundle`. Brew itself is the
-# only prerequisite (see README bootstrap; assumes curl/git/procps/file
-# on the host, which Ubuntu/WSL ships).
+# Applied by `just sync` (_brew) with `brew bundle` (install + cleanup) —
+# the Brewfile is the complete, declarative list: anything installed but not
+# listed here is uninstalled on sync. brew and mise are both installed
+# standalone by their own installers (see README bootstrap); neither is a
+# brew formula here — so `brew bundle cleanup` never removes mise.
 #
-# This holds ONLY the irreducible system layer — what must exist before
-# mise can run, or what mise can't manage:
+# This holds the irreducible system layer — what must exist to run the
+# justfile and what mise doesn't manage:
 #   - zsh: the login shell (the chsh recipe registers the brew path in
 #     /etc/shells before switching)
 #   - git/curl: bootstrap — clone this repo
-#   - mise: the tool manager itself; brew installs/upgrades the binary,
-#     mise manages everything else (see _mise / _mise-upgrade)
 #   - stow: the config linker
 #   - just: runs this justfile
 #   - unzip: some tool installers still expect it
@@ -27,7 +27,6 @@
 brew "zsh"
 brew "git"
 brew "curl"
-brew "mise"
 brew "stow"
 brew "just"
 brew "unzip"

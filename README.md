@@ -12,9 +12,10 @@ _one `just sync` from a fresh shell to home._
 bootstrap a fresh machine:
 
 ```bash
-/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"   # brew (standalone)
 eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
-brew install just
+curl https://mise.run | sh                                                                        # mise (standalone)
+brew install just                                                                                 # to run the justfile
 git clone git@github.com:athenabriana/dots.git ~/Dots
 cd ~/Dots && just sync
 ```
@@ -25,7 +26,7 @@ reconcile anytime, from anywhere, once stowed:
 dots sync
 ```
 
-upgrade everything (apt + mise + zsh plugins), then sync:
+upgrade everything (brew + mise + zsh plugins), then sync:
 
 ```bash
 dots upgrade

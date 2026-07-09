@@ -97,27 +97,31 @@ _brew-upgrade:
     echo "brew: upgrading formulae…"
     brew upgrade
 
-# (internal) Upgrade mise tools (re-resolves latest/lts within pins).
-# The mise binary itself comes from brew — _brew-upgrade covers it.
+# (internal) Update mise itself (standalone install → self-update) and
+# re-resolve latest/lts within pins.
 _mise-upgrade:
     #!/usr/bin/env bash
     set -euo pipefail
-    source "{{DOTS}}/lib/brewenv.sh"
+    export PATH="$HOME/.local/bin:$PATH"
     if ! command -v mise >/dev/null 2>&1; then
         echo "mise not found on PATH — skipping mise upgrade." >&2
         exit 0
     fi
+    echo "mise: self-updating…"
+    mise self-update --yes || echo "mise: self-update skipped (not a self-managed install)." >&2
     echo "mise: upgrading tools…"
     mise upgrade
 
-# (internal) Install mise tools from config.toml, then prune unused versions.
+# (internal) Ensure mise is installed (standalone, via its own installer),
+# then install tools from config.toml and prune unused versions. mise lives
+# in ~/.local/bin — independent of brew.
 _mise:
     #!/usr/bin/env bash
     set -euo pipefail
-    source "{{DOTS}}/lib/brewenv.sh"
+    export PATH="$HOME/.local/bin:$PATH"
     if ! command -v mise >/dev/null 2>&1; then
-        echo "mise not found on PATH — skipping mise tools." >&2
-        exit 0
+        echo "mise: not found — installing (standalone)…"
+        curl -fsSL https://mise.run | sh
     fi
     echo "mise: installing tools from config.toml…"
     mise install
@@ -170,31 +174,35 @@ _vault:
     git -C "$HOME/vault" pull --ff-only --quiet \
         || echo "vault: cannot fast-forward — skipping pull." >&2
 
-# (internal) Install system packages: common/Brewfile + <platform>/Brewfile.
+# (internal) Reconcile system packages to the Brewfile: install what's
+# missing AND uninstall what's no longer listed (declarative). common/ +
+# <platform>/ Brewfiles are merged into one so cleanup sees the full desired
+# set (per-file cleanup would wrongly remove the other file's formulae).
+# mise is installed standalone (not a brew formula), so cleanup won't touch it.
 _brew:
     #!/usr/bin/env bash
     set -euo pipefail
     source "{{DOTS}}/lib/brewenv.sh"
     if ! command -v brew >/dev/null 2>&1; then
         # Assumes curl/git/procps/file on the host (Ubuntu/WSL ships them).
-        echo "brew: not found — installing Homebrew…"
+        echo "brew: not found — installing Homebrew (standalone)…"
         # NONINTERACTIVE makes the installer check sudo with -n (no prompt),
         # so cache the credentials first.
         sudo -v
         NONINTERACTIVE=1 /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
         source "{{DOTS}}/lib/brewenv.sh"
     fi
-    files=("{{DOTS}}/common/Brewfile")
-    [ -f "{{DOTS}}/{{PLAT}}/Brewfile" ] && files+=("{{DOTS}}/{{PLAT}}/Brewfile")
-    for f in "${files[@]}"; do
-        rel="${f#"{{DOTS}}/"}"
-        if brew bundle check --file "$f" >/dev/null 2>&1; then
-            echo "brew: $rel already satisfied."
-        else
-            echo "brew: bundling $rel…"
-            brew bundle --file "$f"
-        fi
-    done
+    union="$(mktemp)"; trap 'rm -f "$union"' EXIT
+    cat "{{DOTS}}/common/Brewfile" > "$union"
+    [ -f "{{DOTS}}/{{PLAT}}/Brewfile" ] && cat "{{DOTS}}/{{PLAT}}/Brewfile" >> "$union"
+    if brew bundle check --file "$union" >/dev/null 2>&1; then
+        echo "brew: Brewfile already satisfied."
+    else
+        echo "brew: installing from Brewfile…"
+        brew bundle install --file "$union"
+    fi
+    echo "brew: cleaning up formulae not in the Brewfile…"
+    brew bundle cleanup --force --file "$union"
 
 # Stow common/ + <platform>/ packages into $HOME (backs up real files).
 link:
